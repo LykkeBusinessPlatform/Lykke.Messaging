@@ -127,19 +127,11 @@ namespace Inceptum.Messaging.Castle
                 {
                     string error;
                     if (!m_MessagingEngine.VerifyEndpoint(endpoint, usage, configureIfRequired, out error))
-                        throw new ConfigurationErrorsException(error);
+                        throw new ApplicationException(error);
                 }));
             return this;
         }
-
-        public MessagingFacility WithConfigurationFromAppConfig(string sectionName="messaging")
-        {
-            var messagingConfiguration = ConfigurationManager.GetSection(sectionName) as IMessagingConfiguration;
-            if (messagingConfiguration == null) throw new ConfigurationErrorsException(sectionName+" section not defined");
-            WithConfiguration(messagingConfiguration);
-            return this;
-        }
-
+        
         public void AddInitStep(Action<IKernel> step)
         {
             m_InitPreSteps.Add(step);

@@ -77,10 +77,10 @@ namespace Inceptum.Messaging
             var transportInfo = m_TransportResolver.GetTransport(transportId);
 
             if (transportInfo == null)
-                throw new ConfigurationErrorsException(string.Format("Transport '{0}' is not resolvable", transportId));
+                throw new ApplicationException(string.Format("Transport '{0}' is not resolvable", transportId));
             var factory = m_TransportFactories.FirstOrDefault(f => f.Name == transportInfo.Messaging);
             if (factory == null)
-                throw new ConfigurationErrorsException(string.Format("Can not create transport '{0}', {1} messaging is not supported", transportId,
+                throw new ApplicationException(string.Format("Can not create transport '{0}', {1} messaging is not supported", transportId,
                     transportInfo.Messaging));
 
             ResolvedTransport transport;

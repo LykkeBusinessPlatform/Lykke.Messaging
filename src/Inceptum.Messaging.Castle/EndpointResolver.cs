@@ -24,7 +24,7 @@ namespace Inceptum.Messaging.Configuration
         public Endpoint Get(string endpointName)
         {
             if (!Contains(endpointName))
-                throw new ConfigurationErrorsException(string.Format("Endpoint with name '{0} not found", endpointName));
+                throw new ApplicationException(string.Format("Endpoint with name '{0} not found", endpointName));
 
             return m_Endpoints[endpointName];
         }

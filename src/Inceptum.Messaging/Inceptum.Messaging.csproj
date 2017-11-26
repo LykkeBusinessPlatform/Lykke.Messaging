@@ -50,7 +50,6 @@
       <HintPath>..\packages\protobuf-net.2.0.0.640\lib\net40\protobuf-net.dll</HintPath>
     </Reference>
     <Reference Include="System" />
-    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Reactive.Core, Version=3.0.1000.0, Culture=neutral, PublicKeyToken=94bc3704cddfc263, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Reactive.Core.3.1.1\lib\net45\System.Reactive.Core.dll</HintPath>
@@ -82,17 +81,8 @@
     <Compile Include="..\VersionInfo.cs">
       <Link>Properties\VersionInfo.cs</Link>
     </Compile>
-    <Compile Include="Configuration\EndpointConfigurationElement.cs" />
-    <Compile Include="Configuration\EndpointsCollection.cs" />
     <Compile Include="Configuration\IEndpointProvider.cs" />
     <Compile Include="Configuration\IMessagingConfiguration.cs" />
-    <Compile Include="Configuration\MessagingConfigurationSection.cs" />
-    <Compile Include="Configuration\NamedConfigurationElement.cs" />
-    <Compile Include="Configuration\NamedConfigurationElementCollection.cs" />
-    <Compile Include="Configuration\ProcessingGroupConfigurationElement.cs" />
-    <Compile Include="Configuration\ProcessingGroupsCollection.cs" />
-    <Compile Include="Configuration\TransportConfigurationElement.cs" />
-    <Compile Include="Configuration\TransportsCollection.cs" />
     <Compile Include="Contract\Endpoint.cs" />
     <Compile Include="Contract\IMessagingEngine.cs" />
     <Compile Include="Contract\TransportConstants.cs" />
