@@ -36,7 +36,7 @@ namespace Inceptum.Messaging.InMemory
         public IDisposable Subscribe(string destination, Action<BinaryMessage, Action<bool>> callback, string messageType)
         {
             var subject = m_Transport[destination];
-            var subscribe = subject.Where(m => m.Type == messageType || messageType == null).ObserveOn(m_Scheduler)
+            var subscribe = subject?.Where(m => m.Type == messageType || messageType == null).ObserveOn(m_Scheduler)
                 .Subscribe(message => callback(message, b =>
                 {
                     if (!b)

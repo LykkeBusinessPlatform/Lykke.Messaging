@@ -45,12 +45,7 @@ namespace Inceptum.DataBus.Tests.Messaging
             protected override  TInitRequest GetInitRequest(TContext context)
             {
                 return GetInitRequestImpl(context);
-            }
-
-            protected override IDisposable InitializeFeed(Subject<TData> dataFeed, TInitResponse response, TContext context)
-            {
-                return InitializeFeedImpl(dataFeed, response, context);
-            }
+            }            
         }
 
         [Test(Description = "Test of internal logic - observable should be deffered with notfication on subscription finished.")]
