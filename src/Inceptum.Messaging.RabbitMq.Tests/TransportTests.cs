@@ -51,7 +51,7 @@ namespace Inceptum.Messaging.RabbitMq.Tests
         private string m_TempQueue;
 
 
-        [TestFixtureSetUp]
+        [OneTimeSetUp]
         public void TestFixtureSetUp()
         {
             m_Factory = new ConnectionFactory { HostName = HOST, UserName = "guest", Password = "guest" };
@@ -106,7 +106,7 @@ namespace Inceptum.Messaging.RabbitMq.Tests
 
 
         [Test]
-        [Ignore]
+        [Ignore("integration")]
         public void SendFailureTest()
         {
             using (var transport = new RabbitMqTransport(HOST, "guest", "guest"))
@@ -355,7 +355,7 @@ namespace Inceptum.Messaging.RabbitMq.Tests
         }
 
         [Test]
-        [Ignore]
+        [Ignore("integration")]
         [TestCase(10, true,TestName = "10b confirmed")]
         [TestCase(10, false,TestName = "10b")]
         [TestCase(1024, false, TestName = "1Kb")]
@@ -386,7 +386,7 @@ namespace Inceptum.Messaging.RabbitMq.Tests
 
 
         [Test]
-        [Ignore]
+        [Ignore("integration")]
         public void EndToEndRabbitResubscriptionTest()
         {
 
@@ -445,51 +445,56 @@ namespace Inceptum.Messaging.RabbitMq.Tests
 
       
 
-        [Test]
-        [ExpectedException(typeof (InvalidOperationException))]
+        [Test]        
         public void AttemptToSubscribeSameDestinationAndMessageTypeTwiceFailureTest()
         {
             using (var transport = new RabbitMqTransport(HOST, "guest", "guest"))
             {
                 IMessagingSession messagingSession = transport.CreateSession( null);
                 messagingSession.Subscribe(TEST_QUEUE, (message, acknowledge) => { }, "type1");
-                messagingSession.Subscribe(TEST_QUEUE, (message, acknowledge) => { }, "type1");
+                Assert.That(() => messagingSession.Subscribe(TEST_QUEUE, (message, acknowledge) => { }, "type1"), Throws.TypeOf<InvalidOperationException>());
             }
         }
         
-        [Test]
-        [ExpectedException(typeof (InvalidOperationException))]
+        [Test]        
         public void AttemptToSubscribeSharedDestinationWithoutMessageTypeFailureTest()
         {
             using (var transport = new RabbitMqTransport(HOST, "guest", "guest"))
             {
                 IMessagingSession messagingSession = transport.CreateSession( null);
                 messagingSession.Subscribe(TEST_QUEUE, (message, acknowledge) => { }, "type1");
-                messagingSession.Subscribe(TEST_QUEUE, (message, acknowledge) => { }, null);
+
+                Assert.That(() => messagingSession.Subscribe(TEST_QUEUE, (message, acknowledge) => { }, null), Throws.TypeOf<InvalidOperationException>());                
             }
         }
 
-        [Test]
-        [ExpectedException(typeof (InvalidOperationException))]
+        [Test]        
         public void AttemptToSubscribeNonSharedDestinationWithMessageTypeFailureTest()
         {
             using (var transport = new RabbitMqTransport(HOST, "guest", "guest"))
             {
                 IMessagingSession messagingSession = transport.CreateSession( null);
-                messagingSession.Subscribe(TEST_QUEUE, (message, acknowledge) => { }, null);
-                messagingSession.Subscribe(TEST_QUEUE, (message, acknowledge) => { }, "type1");
+
+                Assert.That(() =>
+                {
+                    messagingSession.Subscribe(TEST_QUEUE, (message, acknowledge) => { }, null);
+                    messagingSession.Subscribe(TEST_QUEUE, (message, acknowledge) => { }, "type1");
+                }, Throws.TypeOf<InvalidOperationException>());
             }
         }
 
-        [Test]
-        [ExpectedException(typeof (InvalidOperationException))]
+        [Test]        
         public void AttemptToSubscribeSameDestinationWithoutMessageTypeTwiceFailureTest()
         {
             using (var transport = new RabbitMqTransport(HOST, "guest", "guest"))
             {
                 IMessagingSession messagingSession = transport.CreateSession( null);
-                messagingSession.Subscribe(TEST_QUEUE, (message, acknowledge) => { }, null);
-                messagingSession.Subscribe(TEST_QUEUE, (message, acknowledge) => { }, null);
+
+                Assert.That(() =>
+                {
+                    messagingSession.Subscribe(TEST_QUEUE, (message, acknowledge) => { }, null);
+                    messagingSession.Subscribe(TEST_QUEUE, (message, acknowledge) => { }, null);
+                }, Throws.TypeOf<InvalidOperationException>());
             }
         }
 

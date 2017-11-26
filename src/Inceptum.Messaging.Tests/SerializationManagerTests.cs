@@ -50,8 +50,7 @@ namespace Inceptum.Messaging.Tests
             Assert.That(serializationManager.Serialize("fake","test"), Is.EqualTo(new byte[] { 0x1 }), "Serializer was not used for deserialization");
         }
              
-        [Test]
-        [ExpectedException(typeof(ProcessingException))]
+        [Test]        
         public void SerializerNotRegistedFailureTest()
         {
             var serializationManager = new SerializationManager();
@@ -60,12 +59,11 @@ namespace Inceptum.Messaging.Tests
             factory.Expect(f => f.Create<int>()).Return(null);
             serializationManager.RegisterSerializerFactory(factory);
 
-            serializationManager.ExtractSerializer<int>("fake");
+            Assert.That(() => serializationManager.ExtractSerializer<int>("fake"), Throws.TypeOf<ProcessingException>());
         }
         
              
-        [Test]
-        [ExpectedException(typeof(ProcessingException))]
+        [Test]        
         public void SerializerNotCreatedByFactoryFailureTest()
         {
             var serializationManager = new SerializationManager();
@@ -74,7 +72,7 @@ namespace Inceptum.Messaging.Tests
             factory.Expect(f => f.Create<string>()).Return(null);
             serializationManager.RegisterSerializerFactory(factory);
 
-            serializationManager.ExtractSerializer<string>("fake");
+            Assert.That(() => serializationManager.ExtractSerializer<string>("fake"), Throws.TypeOf<ProcessingException>());
         }
         
               

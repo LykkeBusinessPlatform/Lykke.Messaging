@@ -123,7 +123,7 @@ namespace Inceptum.Messaging.Castle
         public MessagingFacility VerifyEndpoints(EndpointUsage usage,bool configureIfRequired,params string[] endpoints)
         {
             AddPostInitStep(kernel =>
-                endpoints.Select(ep => m_EndpointProvider.Get(ep)).ForEach(endpoint =>
+                endpoints.Select(ep => m_EndpointProvider.Get(ep)).ToList().ForEach(endpoint =>
                 {
                     string error;
                     if (!m_MessagingEngine.VerifyEndpoint(endpoint, usage, configureIfRequired, out error))

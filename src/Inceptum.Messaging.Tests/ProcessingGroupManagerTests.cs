@@ -17,13 +17,12 @@ namespace Inceptum.Messaging.Tests
     [TestFixture]
     public class ProcessingGroupManagerTests
     {
-        [Test]
-        [ExpectedException(typeof(InvalidSubscriptionException), ExpectedMessage = "Priority other then 0 is not applicable for processing group with zero concurrencyLevel (messages are processed on consuming thread)")]
+        [Test]        
         public void ProcessingGroupWithZeroConcurrencyDoesNotAcceptPriority()
         {
             using (var processingGroup = new ProcessingGroup("test", new ProcessingGroupInfo()))
             {
-                processingGroup.Subscribe(MockRepository.GenerateMock<IMessagingSession>(), "dest", (message, action) => { }, null, 1);
+                Assert.That(() => processingGroup.Subscribe(MockRepository.GenerateMock<IMessagingSession>(), "dest", (message, action) => { }, null, 1), Throws.TypeOf<InvalidSubscriptionException>());
             }
         }
 
@@ -50,7 +49,7 @@ namespace Inceptum.Messaging.Tests
                 }, null, "pg", 0);
             using (subscription)
             {
-                Enumerable.Range(1, 20).ForEach(i => session.Send("queue", new BinaryMessage(), 0));
+                Enumerable.Range(1, 20).ToList().ForEach(i => session.Send("queue", new BinaryMessage(), 0));
                 Thread.Sleep(2000);
             }
             Assert.That(usedThreads.Count(), Is.EqualTo(20), "not all messages were processed");
@@ -87,7 +86,7 @@ namespace Inceptum.Messaging.Tests
 
             using (subscription)
             {
-                Enumerable.Range(1, 20).ForEach(i => processingGroup.Send("queue", new BinaryMessage { Bytes = Encoding.UTF8.GetBytes((i % 3).ToString()) }, 0));
+                Enumerable.Range(1, 20).ToList().ForEach(i => processingGroup.Send("queue", new BinaryMessage { Bytes = Encoding.UTF8.GetBytes((i % 3).ToString()) }, 0));
                 Thread.Sleep(1200);
             }
             Assert.That(usedThreads.Count(), Is.EqualTo(20), "not all messages were processed");
@@ -170,7 +169,7 @@ namespace Inceptum.Messaging.Tests
             using (subscription2)
             {
 
-                Enumerable.Range(1, 20)
+                Enumerable.Range(1, 20).ToList()
                     .ForEach(i =>processingGroupManager.Send(new Endpoint { Destination = "queue" + i % 3, TransportId = "transport-1" }, new BinaryMessage { Bytes = Encoding.UTF8.GetBytes((i % 3).ToString()) }, 0,"pg"));
 
                 Thread.Sleep(1200);

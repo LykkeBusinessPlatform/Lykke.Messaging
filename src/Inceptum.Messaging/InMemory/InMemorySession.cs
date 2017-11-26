@@ -10,7 +10,7 @@ namespace Inceptum.Messaging.InMemory
 {
     internal class InMemorySession : IMessagingSession
     {
-        private readonly EventLoopScheduler m_Scheduler = new EventLoopScheduler(ts => new Thread(ts) {Name = "inmemory transport"});
+        private readonly EventLoopScheduler m_Scheduler = new EventLoopScheduler();
         private readonly CompositeDisposable m_Subscriptions = new CompositeDisposable();
         private readonly InMemoryTransport m_Transport;
         private bool m_IsDisposed;
