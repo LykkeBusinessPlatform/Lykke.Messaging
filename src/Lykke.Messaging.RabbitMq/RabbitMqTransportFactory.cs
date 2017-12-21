@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Linq;
+using Common.Log;
 using Inceptum.Messaging.Transports;
+using Lykke.Messaging;
+using Lykke.Messaging.RabbitMq;
 
 namespace Inceptum.Messaging.RabbitMq
 {
@@ -49,10 +52,11 @@ namespace Inceptum.Messaging.RabbitMq
             get { return "RabbitMq"; }
         }
 
-        public ITransport Create(TransportInfo transportInfo, Action onFailure)
+        public ITransport Create(ILog log, TransportInfo transportInfo, Action onFailure)
         {
             var brokers = transportInfo.Broker.Split(',').Select(b => b.Trim()).ToArray();
             return new RabbitMqTransport(
+                log,
                 brokers,
                 transportInfo.Login,
                 transportInfo.Password,

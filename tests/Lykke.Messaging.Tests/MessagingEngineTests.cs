@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using Common.Log;
 using Inceptum.Messaging.Contract;
 using Inceptum.Messaging.InMemory;
+using Lykke.Messaging;
 using NUnit.Framework;
 using Rhino.Mocks;
 
@@ -39,7 +41,7 @@ namespace Inceptum.Messaging.Tests
         public void TransportFailureHandlingTest()
         {
             var resolver = MockTransportResolver();
-            using (var engine = new MessagingEngine(resolver, new InMemoryTransportFactory()))
+            using (var engine = new MessagingEngine(new LogToConsole(), resolver, new InMemoryTransportFactory()))
             {
                 engine.SerializationManager.RegisterSerializer("fake", typeof(string), new FakeStringSerializer());
                 int failureWasReportedCount = 0;
@@ -62,7 +64,7 @@ namespace Inceptum.Messaging.Tests
         public void ByDefaultEachDestinationIsSubscribedOnDedicatedThreadTest()
         {
             ITransportResolver resolver = MockTransportResolver();
-            using (var engine = new MessagingEngine(resolver, new InMemoryTransportFactory()))
+            using (var engine = new MessagingEngine(new LogToConsole(), resolver, new InMemoryTransportFactory()))
             {
                 engine.SerializationManager.RegisterSerializer("fake", typeof(string), new FakeStringSerializer());
 

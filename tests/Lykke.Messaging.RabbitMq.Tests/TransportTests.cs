@@ -4,9 +4,12 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
 using Castle.Core.Logging;
+using Common.Log;
 using Inceptum.Messaging.Contract;
 using Inceptum.Messaging.Serialization;
 using Inceptum.Messaging.Transports;
+using Lykke.Messaging;
+using Lykke.Messaging.RabbitMq;
 using NLog;
 using NUnit.Framework;
 using RabbitMQ.Client;
@@ -90,7 +93,7 @@ namespace Inceptum.Messaging.RabbitMq.Tests
         [Test]
         public void SendTest()
         {
-            using (var transport = new RabbitMqTransport(HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(new LogToConsole(), HOST, "guest", "guest"))
             {
                 var delivered=new ManualResetEvent(false);
                 IMessagingSession messagingSession = transport.CreateSession( null);
@@ -109,7 +112,7 @@ namespace Inceptum.Messaging.RabbitMq.Tests
         [Ignore("integration")]
         public void SendFailureTest()
         {
-            using (var transport = new RabbitMqTransport(HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(new LogToConsole(), HOST, "guest", "guest"))
             {
                 var delivered=new ManualResetEvent(false);
                 IMessagingSession messagingSession = transport.CreateSession( ()=>Console.WriteLine("onFailure called"));
@@ -137,7 +140,7 @@ namespace Inceptum.Messaging.RabbitMq.Tests
         [Test]
         public void AckTest()
         {
-            using (var transport = new RabbitMqTransport(HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(new LogToConsole(), HOST, "guest", "guest"))
             {
                 var delivered=new ManualResetEvent(false);
                 IMessagingSession messagingSession = transport.CreateSession( null);
@@ -151,7 +154,7 @@ namespace Inceptum.Messaging.RabbitMq.Tests
                 Assert.That(delivered.WaitOne(1000),Is.True,"Message was not delivered");
             }
 
-            using (var transport = new RabbitMqTransport(HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(new LogToConsole(), HOST, "guest", "guest"))
             {
                 var delivered = new ManualResetEvent(false);
                 IMessagingSession messagingSession = transport.CreateSession(null);
@@ -162,7 +165,7 @@ namespace Inceptum.Messaging.RabbitMq.Tests
         [Test]
         public void NackTest()
         {
-            using (var transport = new RabbitMqTransport(HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(new LogToConsole(), HOST, "guest", "guest"))
             {
                 var delivered=new ManualResetEvent(false);
                 IMessagingSession messagingSession = transport.CreateSession( null);
@@ -176,7 +179,7 @@ namespace Inceptum.Messaging.RabbitMq.Tests
                 Assert.That(delivered.WaitOne(300),Is.True,"Message was not delivered");
             }
 
-            using (var transport = new RabbitMqTransport(HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(new LogToConsole(), HOST, "guest", "guest"))
             {
                 var delivered = new ManualResetEvent(false);
                 IMessagingSession messagingSession = transport.CreateSession(null);
@@ -189,7 +192,7 @@ namespace Inceptum.Messaging.RabbitMq.Tests
         [Test]
         public void RpcTest()
         {
-            using (var transport = new RabbitMqTransport(HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(new LogToConsole(), HOST, "guest", "guest"))
             {
                 var request = new byte[] {0x0, 0x1, 0x2};
                 var response = new byte[] {0x2, 0x1, 0x0};
@@ -213,7 +216,7 @@ namespace Inceptum.Messaging.RabbitMq.Tests
         [TestCase("test", TestName = "Shared destination")]
         public void UnsubscribeTest(string messageType)
         {
-            using (var transport = new RabbitMqTransport(HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(new LogToConsole(), HOST, "guest", "guest"))
             {
                 var ev = new AutoResetEvent(false);
                 IMessagingSession messagingSession = transport.CreateSession( null);
@@ -228,7 +231,7 @@ namespace Inceptum.Messaging.RabbitMq.Tests
         [Test]
         public void ConnectionFailureTest()
         {
-            using (var transport = new RabbitMqTransport(HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(new LogToConsole(), HOST, "guest", "guest"))
             {
                 var onFailureCalled = new AutoResetEvent(false);
                 IMessagingSession messagingSession = transport.CreateSession( () =>
@@ -249,7 +252,7 @@ namespace Inceptum.Messaging.RabbitMq.Tests
         [Test]
         public void SessionIsTreatedAsBrokenAfterSendFailureWithAlreadyClosedExceptionTest()
         {
-            using (var transport = new RabbitMqTransport(HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(new LogToConsole(), HOST, "guest", "guest"))
             {
                 var onFailureCalled = new AutoResetEvent(false);
                 IMessagingSession messagingSession = transport.CreateSession( () =>
@@ -282,7 +285,7 @@ namespace Inceptum.Messaging.RabbitMq.Tests
         [Test]
         public void HandlerWaitStopsAndMessageOfUnknownTypeReturnsToQueueOnUnsubscribeTest()
         {
-            using (var transport = new RabbitMqTransport(HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(new LogToConsole(), HOST, "guest", "guest"))
             {
                 IMessagingSession messagingSession = transport.CreateSession( null);
                 var received = new AutoResetEvent(false);
@@ -302,7 +305,7 @@ namespace Inceptum.Messaging.RabbitMq.Tests
         [Test]
         public void MessageOfUnknownTypeShouldPauseProcessingTillCorrespondingHandlerIsRegisteredTest()
         {
-            using (var transport = new RabbitMqTransport(HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(new LogToConsole(), HOST, "guest", "guest"))
             {
                 IMessagingSession messagingSession = transport.CreateSession( null);
                 var type1Received = new AutoResetEvent(false);
@@ -336,7 +339,7 @@ namespace Inceptum.Messaging.RabbitMq.Tests
             var received = new ManualResetEvent(false);
             Thread connectionThread = null;
                 int managedThreadId;
-            using (var transport = new RabbitMqTransport(HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(new LogToConsole(), HOST, "guest", "guest"))
             {
                 IMessagingSession messagingSession = transport.CreateSession( null);
                 messagingSession.Subscribe(TEST_QUEUE, (message, acknowledge) =>
@@ -366,7 +369,7 @@ namespace Inceptum.Messaging.RabbitMq.Tests
             var messageBytes = new byte[messageSize];
             new Random().NextBytes(messageBytes);
 
-            using (var transport = new RabbitMqTransport(HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(new LogToConsole(), HOST, "guest", "guest"))
             {
                 IMessagingSession messagingSession = transport.CreateSession(null, confirmedSending);
                 Stopwatch sw = Stopwatch.StartNew();
@@ -391,6 +394,7 @@ namespace Inceptum.Messaging.RabbitMq.Tests
         {
 
             var messagingEngine = new MessagingEngine(
+                new LogToConsole(),
                 new TransportResolver(new Dictionary<string, TransportInfo> {{"test", new TransportInfo(HOST, "guest", "guest", null, "RabbitMq")}}),
                 new RabbitMqTransportFactory());
 
@@ -416,7 +420,7 @@ namespace Inceptum.Messaging.RabbitMq.Tests
         [Test]
         public void EndpointVerificationTest()
         {
-            using (var transport = new RabbitMqTransport(HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(new LogToConsole(), HOST, "guest", "guest"))
             {
                 string error;
                 var res = transport.VerifyDestination("unistream.processing.events", EndpointUsage.Publish | EndpointUsage.Subscribe, false, out error);
@@ -434,7 +438,7 @@ namespace Inceptum.Messaging.RabbitMq.Tests
                 Publish = ((object) new PublicationAddress("direct", "", m_TempQueue)).ToString()
             };
 
-            using (var transport = new RabbitMqTransport(HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(new LogToConsole(), HOST, "guest", "guest"))
             {
                 string error;
                 var res = transport.VerifyDestination(defaultExchangeDestination, EndpointUsage.Publish | EndpointUsage.Subscribe, true, out error);
@@ -448,7 +452,7 @@ namespace Inceptum.Messaging.RabbitMq.Tests
         [Test]        
         public void AttemptToSubscribeSameDestinationAndMessageTypeTwiceFailureTest()
         {
-            using (var transport = new RabbitMqTransport(HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(new LogToConsole(), HOST, "guest", "guest"))
             {
                 IMessagingSession messagingSession = transport.CreateSession( null);
                 messagingSession.Subscribe(TEST_QUEUE, (message, acknowledge) => { }, "type1");
@@ -459,7 +463,7 @@ namespace Inceptum.Messaging.RabbitMq.Tests
         [Test]        
         public void AttemptToSubscribeSharedDestinationWithoutMessageTypeFailureTest()
         {
-            using (var transport = new RabbitMqTransport(HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(new LogToConsole(), HOST, "guest", "guest"))
             {
                 IMessagingSession messagingSession = transport.CreateSession( null);
                 messagingSession.Subscribe(TEST_QUEUE, (message, acknowledge) => { }, "type1");
@@ -471,7 +475,7 @@ namespace Inceptum.Messaging.RabbitMq.Tests
         [Test]        
         public void AttemptToSubscribeNonSharedDestinationWithMessageTypeFailureTest()
         {
-            using (var transport = new RabbitMqTransport(HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(new LogToConsole(), HOST, "guest", "guest"))
             {
                 IMessagingSession messagingSession = transport.CreateSession( null);
 
@@ -486,7 +490,7 @@ namespace Inceptum.Messaging.RabbitMq.Tests
         [Test]        
         public void AttemptToSubscribeSameDestinationWithoutMessageTypeTwiceFailureTest()
         {
-            using (var transport = new RabbitMqTransport(HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(new LogToConsole(), HOST, "guest", "guest"))
             {
                 IMessagingSession messagingSession = transport.CreateSession( null);
 
@@ -503,7 +507,7 @@ namespace Inceptum.Messaging.RabbitMq.Tests
         [Test]
         public string VerifyPublishEndpointFailureTest()
         {
-            var transport = new RabbitMqTransport(HOST, "guest", "guest");
+            var transport = new RabbitMqTransport(new LogToConsole(), HOST, "guest", "guest");
             string error;
             var valid = transport.VerifyDestination("non.existing", EndpointUsage.Publish, false, out error);
             Assert.That(valid,Is.False, "endpoint reported as valid");
@@ -514,7 +518,7 @@ namespace Inceptum.Messaging.RabbitMq.Tests
         [Test]
         public string VerifySubscriptionEndpointNoExchangeFailureTest()
         {
-            var transport = new RabbitMqTransport(HOST, "guest", "guest");
+            var transport = new RabbitMqTransport(new LogToConsole(), HOST, "guest", "guest");
             string error;
             var valid = transport.VerifyDestination(new Destination { Subscribe = "non.existing", Publish = "non.existing" }, EndpointUsage.Subscribe, false, out error);
             Assert.That(valid,Is.False, "endpoint reported as valid");
@@ -526,7 +530,7 @@ namespace Inceptum.Messaging.RabbitMq.Tests
         [Test]
         public string VerifySubscriptionEndpointNoQueueFailureTest()
         {
-            var transport = new RabbitMqTransport(HOST, "guest", "guest");
+            var transport = new RabbitMqTransport(new LogToConsole(), HOST, "guest", "guest");
             string error;
             var valid = transport.VerifyDestination(new Destination { Subscribe = "non.existing", Publish = "amq.direct" }, EndpointUsage.Subscribe, false, out error);
             Assert.That(valid,Is.False, "endpoint reported as valid");
@@ -548,7 +552,7 @@ namespace Inceptum.Messaging.RabbitMq.Tests
             var sendEndpoint = new Endpoint("sendTransport", TEST_EXCHANGE, TEST_QUEUE, true, "json");
 
 
-            using (var me = new MessagingEngine(transportResolver, new RabbitMqTransportFactory(false)))
+            using (var me = new MessagingEngine(new LogToConsole(), transportResolver, new RabbitMqTransportFactory(false)))
             {
                 me.Send(1, sendEndpoint);
                 me.ResubscriptionTimeout = 100;

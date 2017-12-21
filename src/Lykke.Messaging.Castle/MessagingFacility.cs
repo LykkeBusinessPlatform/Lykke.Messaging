@@ -9,8 +9,10 @@ using Castle.MicroKernel;
 using Castle.MicroKernel.Context;
 using Castle.MicroKernel.Facilities;
 using Castle.MicroKernel.Registration;
+using Common.Log;
 using Inceptum.Messaging.Configuration;
 using Inceptum.Messaging.Contract;
+using Lykke.Messaging;
 
 namespace Inceptum.Messaging.Castle
 {
@@ -46,7 +48,7 @@ namespace Inceptum.Messaging.Castle
 
     }
     public class MessagingFacility : AbstractFacility
-    {
+    {        
         private IDictionary<string, JailStrategy> m_JailStrategies;
         private readonly List<IHandler> m_SerializerFactoryWaitList = new List<IHandler>();
         private readonly List<IHandler> m_MessageHandlerWaitList = new List<IHandler>();
@@ -62,7 +64,7 @@ namespace Inceptum.Messaging.Castle
         private IMessagingConfiguration MessagingConfiguration { get; set; }
 
         public MessagingFacility()
-        {
+        {            
             MessagingConfiguration = m_DefaultMessagingConfiguration;
         }
 
@@ -171,7 +173,7 @@ namespace Inceptum.Messaging.Castle
             Kernel.Resolver.AddSubResolver(subDependencyResolver);
 
 
-            m_MessagingEngine = new MessagingEngine(
+            m_MessagingEngine = new MessagingEngine(new LogToConsole(), 
                 new TransportResolver(MessagingConfiguration.GetTransports() ?? new Dictionary<string, TransportInfo>(), m_JailStrategies),
                 MessagingConfiguration.GetProcessingGroups(),
                 m_TransportFactories.ToArray());

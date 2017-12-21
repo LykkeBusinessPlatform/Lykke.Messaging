@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Common.Log;
 using Inceptum.Messaging.Contract;
 using Inceptum.Messaging.Transports;
 using Inceptum.Messaging.Utils;
+using Lykke.Messaging;
 
 namespace Inceptum.Messaging
 {
@@ -13,11 +15,13 @@ namespace Inceptum.Messaging
         private readonly List<string> m_KnownIds = new List<string>();
         private readonly TransportInfo m_TransportInfo;
         private readonly Action m_ProcessTransportFailure;
+        private readonly ILog _log;
         private readonly ITransportFactory m_Factory;
         private readonly List<MessagingSessionWrapper> m_MessagingSessions = new List<MessagingSessionWrapper>();
 
-        public ResolvedTransport(TransportInfo transportInfo, Action processTransportFailure, ITransportFactory factory)
+        public ResolvedTransport(ILog log, TransportInfo transportInfo, Action processTransportFailure, ITransportFactory factory)
         {
+            _log = log;
             m_Factory = factory;
             m_ProcessTransportFailure = processTransportFailure;
             m_TransportInfo = transportInfo;
@@ -47,7 +51,7 @@ namespace Inceptum.Messaging
         public IMessagingSession GetSession(string transportId, string name, Action onFailure)
         {
             addId(transportId);
-            var transport = Transport ?? (Transport = m_Factory.Create(m_TransportInfo, Helper.CallOnlyOnce(processTransportFailure)));
+            var transport = Transport ?? (Transport = m_Factory.Create(_log, m_TransportInfo, Helper.CallOnlyOnce(processTransportFailure)));
             MessagingSessionWrapper messagingSession;
 
             lock (m_MessagingSessions)
@@ -118,7 +122,7 @@ namespace Inceptum.Messaging
         [MethodImpl(MethodImplOptions.Synchronized)]
         public bool VerifyDestination(Destination destination, EndpointUsage usage, bool configureIfRequired,out string error)
         {
-            var transport = Transport ?? (Transport = m_Factory.Create(m_TransportInfo, processTransportFailure));
+            var transport = Transport ?? (Transport = m_Factory.Create(_log, m_TransportInfo, processTransportFailure));
             return transport.VerifyDestination(destination, usage, configureIfRequired, out error);
         }
 

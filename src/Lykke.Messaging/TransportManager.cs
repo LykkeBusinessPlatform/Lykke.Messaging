@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
 using System.Threading;
+using Common.Log;
 using Inceptum.Messaging.Contract;
 using Inceptum.Messaging.InMemory;
 using Inceptum.Messaging.Transports;
+using Lykke.Messaging;
 
 namespace Inceptum.Messaging
 {
@@ -18,15 +20,17 @@ namespace Inceptum.Messaging
     internal class TransportManager : ITransportManager
     {
         private readonly Dictionary<TransportInfo, ResolvedTransport> m_Transports = new Dictionary<TransportInfo, ResolvedTransport>();
+        private readonly ILog _log;
         private readonly ITransportResolver m_TransportResolver;
         private readonly ManualResetEvent m_IsDisposed = new ManualResetEvent(false);
         private readonly ITransportFactory[] m_TransportFactories;
 
 
-        public TransportManager(ITransportResolver transportResolver, params ITransportFactory[] transportFactories)
+        public TransportManager(ILog log, ITransportResolver transportResolver, params ITransportFactory[] transportFactories)
         {
             m_TransportFactories = transportFactories.Concat(new[] {new InMemoryTransportFactory()}).ToArray();
             if (transportResolver == null) throw new ArgumentNullException("transportResolver");
+            _log = log;
             m_TransportResolver = transportResolver;
         }
 
@@ -91,7 +95,7 @@ namespace Inceptum.Messaging
                 {
                     if (!m_Transports.TryGetValue(transportInfo, out transport))
                     {
-                        transport = new ResolvedTransport(transportInfo, () => ProcessTransportFailure(transportInfo), factory);
+                        transport = new ResolvedTransport(_log, transportInfo, () => ProcessTransportFailure(transportInfo), factory);
                         m_Transports.Add(transportInfo, transport);
                     }
                 }

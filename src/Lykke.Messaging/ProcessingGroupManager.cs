@@ -1,34 +1,34 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Linq;
 using System.Reactive.Disposables;
 using System.Text;
-using System.Threading;
+using Common.Log;
 using Inceptum.Core.Utils;
+using Inceptum.Messaging;
 using Inceptum.Messaging.Contract;
 using Inceptum.Messaging.Transports;
 using Inceptum.Messaging.Utils;
-using NLog;
 
-namespace Inceptum.Messaging
+namespace Lykke.Messaging
 {
     internal class ProcessingGroupManager:IDisposable
     {
         private readonly ITransportManager m_TransportManager;
+        private readonly ILog _log;
         readonly List<Tuple<DateTime, Action>> m_DeferredAcknowledgements = new List<Tuple<DateTime, Action>>();
         readonly List<Tuple<DateTime, Action>> m_ResubscriptionSchedule = new List<Tuple<DateTime, Action>>();
         private readonly SchedulingBackgroundWorker m_DeferredAcknowledger;
         private readonly SchedulingBackgroundWorker m_Resubscriber;
-        readonly Logger m_Logger = LogManager.GetCurrentClassLogger();
         readonly Dictionary<string, ProcessingGroup> m_ProcessingGroups=new Dictionary<string, ProcessingGroup>();
         readonly Dictionary<string, ProcessingGroupInfo> m_ProcessingGroupInfos = new Dictionary<string, ProcessingGroupInfo>();
         private volatile bool m_IsDisposing;
 
-        public ProcessingGroupManager(ITransportManager transportManager, IDictionary<string, ProcessingGroupInfo> processingGroups=null, int resubscriptionTimeout=60000)
+        public ProcessingGroupManager(ILog log, ITransportManager transportManager, IDictionary<string, ProcessingGroupInfo> processingGroups=null, int resubscriptionTimeout=60000)
         {
             m_ProcessingGroupInfos = new Dictionary<string, ProcessingGroupInfo>(processingGroups ?? new Dictionary<string, ProcessingGroupInfo>());
             m_TransportManager = transportManager;
+            _log = log;
             ResubscriptionTimeout = resubscriptionTimeout;
             m_DeferredAcknowledger = new SchedulingBackgroundWorker("DeferredAcknowledgement", () => processDeferredAcknowledgements());
             m_Resubscriber = new SchedulingBackgroundWorker("Resubscription", () => processResubscription());
@@ -77,15 +77,15 @@ namespace Inceptum.Messaging
                     var group = getProcessingGroup(processingGroup);
                     processingGroupName = @group.Name;
                     if (attemptNumber > 0)
-                        m_Logger.Info("Resubscribing for endpoint {0} within processing group '{1}'. Attempt# {2}", endpoint, processingGroupName, attemptNumber);
+                        _log.WriteInfoAsync(nameof(ProcessingGroupManager), nameof(Subscribe), $"Resubscribing for endpoint {endpoint} within processing group '{processingGroupName}'. Attempt# {attemptNumber}");
                     else
-                        m_Logger.Info("Subscribing for endpoint {0} within processing group '{1}'", endpoint, processingGroupName);
+                        _log.WriteInfoAsync(nameof(ProcessingGroupManager), nameof(Subscribe), $"Subscribing for endpoint {endpoint} within processing group '{processingGroupName}'");
  
                     var sessionName = getSessionName(@group, priority);
 
                     var session = m_TransportManager.GetMessagingSession(endpoint.TransportId, sessionName, Helper.CallOnlyOnce(() =>
                     {
-                        m_Logger.Info("Subscription for endpoint {0} within processing group '{1}' failure detected. Attempting subscribe again.", endpoint, processingGroupName);
+                        _log.WriteInfoAsync(nameof(ProcessingGroupManager), nameof(Subscribe), $"Subscription for endpoint {endpoint} within processing group '{processingGroupName}' failure detected. Attempting subscribe again.");                        
                         doSubscribe(0);
                     }));
 
@@ -102,16 +102,16 @@ namespace Inceptum.Messaging
                     catch
                     {
                     }
-                    m_Logger.Info("Subscribed for endpoint {0} in processingGroup '{1}' using session {2}", endpoint, processingGroupName, sessionName);
+                    _log.WriteInfoAsync(nameof(ProcessingGroupManager), nameof(Subscribe), $"Subscribed for endpoint {endpoint} in processingGroup '{processingGroupName}' using session {sessionName}");                    
                 }
                 catch (InvalidSubscriptionException e)
                 {
-                    m_Logger.ErrorException(string.Format("Failed to subscribe for endpoint {0} within processing group '{1}'", endpoint, processingGroupName), e);
+                    _log.WriteErrorAsync(nameof(ProcessingGroupManager), nameof(Subscribe), $"Failed to subscribe for endpoint {endpoint} within processing group '{processingGroupName}'", e);                    
                     throw;
                 }
                 catch (Exception e)
                 {
-                    m_Logger.ErrorException(string.Format("Failed to subscribe for endpoint {0} within processing group '{1}'. Attempt# {2}. Will retry in {3}ms", endpoint, processingGroupName, attemptNumber, ResubscriptionTimeout), e);
+                    _log.WriteErrorAsync(nameof(ProcessingGroupManager), nameof(Subscribe), $"Failed to subscribe for endpoint {endpoint} within processing group '{processingGroupName}'. Attempt# {attemptNumber}. Will retry in {ResubscriptionTimeout}ms", e);                    
                     scheduleSubscription(doSubscribe, attemptNumber + 1);
                 }
             };
@@ -189,8 +189,7 @@ namespace Inceptum.Messaging
                 }
                 catch (Exception e)
                 {
-                    m_Logger.WarnException("Deferred acknowledge failed. Will retry later.",e);
-                    
+                    _log.WriteErrorAsync(nameof(ProcessingGroupManager), nameof(processDeferredAcknowledgements), "Deferred acknowledge failed. Will retry later.", e);                    
                 }
             }
 
@@ -221,8 +220,7 @@ namespace Inceptum.Messaging
                 }
                 catch (Exception e)
                 {
-                    m_Logger.DebugException("Resubscription failed. Will retry later.", e);
-
+                    _log.WriteInfoAsync(nameof(ProcessingGroupManager), nameof(processResubscription), "Resubscription failed. Will retry later.");                    
                 }
             }
 

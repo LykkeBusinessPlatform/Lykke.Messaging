@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using Common.Log;
 using Inceptum.Messaging.Transports;
+using Lykke.Messaging;
 
 namespace Inceptum.Messaging.InMemory
 {
@@ -13,7 +15,7 @@ namespace Inceptum.Messaging.InMemory
             get { return "InMemory"; }
         }
 
-        public ITransport Create(TransportInfo transportInfo, Action onFailure)
+        public ITransport Create(ILog log, TransportInfo transportInfo, Action onFailure)
         {
             lock (m_Transports)
             {

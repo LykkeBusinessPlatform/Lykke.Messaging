@@ -10,6 +10,7 @@ using Inceptum.Messaging.Castle;
 using Inceptum.Messaging.Configuration;
 using Inceptum.Messaging.Contract;
 using Inceptum.Messaging.InMemory;
+using Lykke.Messaging;
 using NUnit.Framework;
 using Rhino.Mocks;
 

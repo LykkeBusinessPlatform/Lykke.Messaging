@@ -1,24 +1,24 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Common.Log;
 using Inceptum.Messaging.Contract;
+using Inceptum.Messaging.RabbitMq;
 using Inceptum.Messaging.Transports;
-using NLog;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
 
-namespace Inceptum.Messaging.RabbitMq
+namespace Lykke.Messaging.RabbitMq
 {
     internal class RabbitMqTransport : ITransport
     {
+        private readonly ILog _log;
         private readonly TimeSpan? m_NetworkRecoveryInterval;
         private readonly ConnectionFactory[] m_Factories;
         private readonly List<RabbitMqSession> m_Sessions = new List<RabbitMqSession>();
-        readonly ManualResetEvent m_IsDisposed=new ManualResetEvent(false);
-        readonly Logger m_Logger = LogManager.GetCurrentClassLogger();
+        readonly ManualResetEvent m_IsDisposed=new ManualResetEvent(false);        
         private readonly bool m_ShuffleBrokersOnSessionCreate;
         private static readonly Random m_Random = new Random((int)DateTime.Now.Ticks & 0x0000FFFF);
 
@@ -26,13 +26,14 @@ namespace Inceptum.Messaging.RabbitMq
         {
             get { return m_Sessions.Count; }
         }
-        public RabbitMqTransport(string broker, string username, string password) : this(new[] {broker}, username, password)
+        public RabbitMqTransport(ILog log, string broker, string username, string password) : this(log, new[] {broker}, username, password)
         {
 
         }
 
-        public RabbitMqTransport(string[] brokers, string username, string password, bool shuffleBrokersOnSessionCreate=true, TimeSpan? networkRecoveryInterval = null)
+        public RabbitMqTransport(ILog log, string[] brokers, string username, string password, bool shuffleBrokersOnSessionCreate=true, TimeSpan? networkRecoveryInterval = null)
         {
+            _log = log;
             m_NetworkRecoveryInterval = networkRecoveryInterval;
             m_ShuffleBrokersOnSessionCreate = shuffleBrokersOnSessionCreate&& brokers.Length>1;
             if (brokers == null) throw new ArgumentNullException("brokers");
@@ -82,12 +83,12 @@ namespace Inceptum.Messaging.RabbitMq
                 try
                 {
                     var connection = factories[i].CreateConnection();
-                    m_Logger.Info("Created rmq connection to {0}.", factories[i].Endpoint.HostName);
+                    _log.WriteInfoAsync(nameof(RabbitMqTransport), nameof(createConnection), $"Created rmq connection to {factories[i].Endpoint.HostName}.");                    
                     return connection;
                 }
                 catch (Exception e)
                 {
-                    m_Logger.WarnException(string.Format("Failed to create rmq connection to {0}{1}: ", factories[i].Endpoint.HostName, (i + 1 != factories.Length) ? " (will try other known hosts)" : ""), e);
+                    _log.WriteErrorAsync(nameof(RabbitMqTransport), nameof(createConnection), string.Format("Failed to create rmq connection to {0}{1}: ", factories[i].Endpoint.HostName, (i + 1 != factories.Length) ? " (will try other known hosts)" : ""), e);                    
                     exception = e;
                 }
             }
@@ -120,7 +121,7 @@ namespace Inceptum.Messaging.RabbitMq
                 lock (m_Sessions)
                 {
                     m_Sessions.Remove(rabbitMqSession);
-                    m_Logger.WarnException(string.Format("Failed to send message to destination '{0}' broker '{1}'. Treating session as broken. ", destination, connection.Endpoint.HostName), exception); 
+                    _log.WriteErrorAsync(nameof(RabbitMqTransport), nameof(CreateSession), string.Format("Failed to send message to destination '{0}' broker '{1}'. Treating session as broken. ", destination, connection.Endpoint.HostName), exception);                   
                 }
             });
             
@@ -134,7 +135,7 @@ namespace Inceptum.Messaging.RabbitMq
 
                     if ((reason.Initiator != ShutdownInitiator.Application || reason.ReplyCode != 200) && onFailure != null)
                     {
-                        m_Logger.Warn("Rmq session to {0} is broken. Reason: {1}", connection.Endpoint.HostName, reason);
+                        _log.WriteWarningAsync(nameof(RabbitMqTransport), "ConnectionShutdown", string.Format("Rmq session to {0} is broken. Reason: {1}", connection.Endpoint.HostName, reason));                        
 
                         // If m_NetworkRecoveryInterval is null this
                         //         means that native Rabbit MQ 
@@ -148,18 +149,14 @@ namespace Inceptum.Messaging.RabbitMq
                         {
                             onFailure();
                         }
-                    }
-                    else
-                    {
-                        m_Logger.Debug("Rmq session to {0} is closed", connection.Endpoint.HostName);
-                    }
+                    }                    
                 };
 
             lock (m_Sessions)
             {
                 m_Sessions.Add(session);
             }
-            m_Logger.Debug("Rmq session to {0} is opened", connection.Endpoint.HostName);
+            
             return session;
         }
 

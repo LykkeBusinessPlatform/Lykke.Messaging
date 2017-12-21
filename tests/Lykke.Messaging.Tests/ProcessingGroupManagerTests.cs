@@ -6,9 +6,11 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Castle.Core.Internal;
+using Common.Log;
 using Inceptum.Messaging.Contract;
 using Inceptum.Messaging.InMemory;
 using Inceptum.Messaging.Transports;
+using Lykke.Messaging;
 using NUnit.Framework;
 using Rhino.Mocks;
 
@@ -30,11 +32,12 @@ namespace Inceptum.Messaging.Tests
         public void SameThreadSubscriptionTest()
         {
             var transportManager = new TransportManager(
+                new LogToConsole(),
                 new TransportResolver(new Dictionary<string, TransportInfo>
                     {
                         {"transport-1", new TransportInfo("transport-1", "login1", "pwd1", "None", "InMemory")}
                     }));
-            var processingGroupManager = new ProcessingGroupManager(transportManager);
+            var processingGroupManager = new ProcessingGroupManager(new LogToConsole(), transportManager);
 
             var session = transportManager.GetMessagingSession("transport-1", "pg"); var usedThreads = new List<int>();
             var subscription = processingGroupManager.Subscribe(new Endpoint { Destination = "queue", TransportId = "transport-1" },
@@ -60,11 +63,12 @@ namespace Inceptum.Messaging.Tests
         public void MultiThreadThreadSubscriptionTest()
         {
             var transportManager = new TransportManager(
+                new LogToConsole(),
                 new TransportResolver(new Dictionary<string, TransportInfo>
                     {
                         {"transport-1", new TransportInfo("transport-1", "login1", "pwd1", "None", "InMemory")}
                     }));
-            var processingGroupManager = new ProcessingGroupManager(transportManager, new Dictionary<string, ProcessingGroupInfo>()
+            var processingGroupManager = new ProcessingGroupManager(new LogToConsole(), transportManager, new Dictionary<string, ProcessingGroupInfo>()
             {
                 {
                     "pg", new ProcessingGroupInfo() {ConcurrencyLevel = 3}
@@ -98,11 +102,12 @@ namespace Inceptum.Messaging.Tests
         public void QueuedTaskSchedulerIsHiddenTest()
         {
             var transportManager = new TransportManager(
+                new LogToConsole(),
                 new TransportResolver(new Dictionary<string, TransportInfo>
                     {
                         {"transport-1", new TransportInfo("transport-1", "login1", "pwd1", "None", "InMemory")}
                     }));
-            var processingGroupManager = new ProcessingGroupManager(transportManager, new Dictionary<string, ProcessingGroupInfo>()
+            var processingGroupManager = new ProcessingGroupManager(new LogToConsole(), transportManager, new Dictionary<string, ProcessingGroupInfo>()
             {
                 {
                     "pg", new ProcessingGroupInfo() {ConcurrencyLevel = 1,QueueCapacity = 1000}
@@ -136,11 +141,12 @@ namespace Inceptum.Messaging.Tests
         public void MultiThreadPrioritizedThreadSubscriptionTest()
         {
             var transportManager = new TransportManager(
+                new LogToConsole(),
                 new TransportResolver(new Dictionary<string, TransportInfo>
                     {
                         {"transport-1", new TransportInfo("transport-1", "login1", "pwd1", "None", "InMemory")}
                     }));
-            var processingGroupManager = new ProcessingGroupManager(transportManager, new Dictionary<string, ProcessingGroupInfo>()
+            var processingGroupManager = new ProcessingGroupManager(new LogToConsole(), transportManager, new Dictionary<string, ProcessingGroupInfo>()
             {
                 {
                     "pg", new ProcessingGroupInfo {ConcurrencyLevel = 3}
@@ -408,7 +414,7 @@ namespace Inceptum.Messaging.Tests
                 .IgnoreArguments()
                 .WhenCalled(invocation => setOnFail((Action)invocation.Arguments[2]))
                 .Return(session);
-            return new ProcessingGroupManager(transportManager,new Dictionary<string, ProcessingGroupInfo>
+            return new ProcessingGroupManager(new LogToConsole(), transportManager,new Dictionary<string, ProcessingGroupInfo>
             {
                 {"SingleThread",new ProcessingGroupInfo(){ConcurrencyLevel = 1}},
                 {"MultiThread",new ProcessingGroupInfo(){ConcurrencyLevel = 3}}

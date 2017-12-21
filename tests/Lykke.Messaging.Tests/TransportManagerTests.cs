@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Castle.Core.Internal;
+using Common.Log;
 using Inceptum.Messaging.Contract;
 using Inceptum.Messaging.InMemory;
 using Inceptum.Messaging.Transports;
+using Lykke.Messaging;
 using NUnit.Framework;
 using Rhino.Mocks;
 
@@ -44,9 +46,9 @@ namespace Inceptum.Messaging.Tests
             var transport = MockRepository.GenerateMock<ITransport>();
             Action creaedSessionOnFailure = () => { Console.WriteLine("!!"); };
             transport.Expect(t => t.CreateSession(null)).IgnoreArguments().WhenCalled(invocation => creaedSessionOnFailure = (Action) invocation.Arguments[0]);
-            factory.Expect(f => f.Create(null, null)).IgnoreArguments().Return(transport);
+            factory.Expect(f => f.Create(null, null, null)).IgnoreArguments().Return(transport);
             factory.Expect(f => f.Name).Return("Mock");
-            var transportManager = new TransportManager(resolver, factory);
+            var transportManager = new TransportManager(new LogToConsole(), resolver, factory);
             int i = 0;
            
             transportManager.GetMessagingSession(TransportConstants.TRANSPORT_ID3, "test", () => { Interlocked.Increment(ref i); });
@@ -61,7 +63,7 @@ namespace Inceptum.Messaging.Tests
         public void ConcurrentTransportResolutionTest()
         {
             var resolver = MockTransportResolver();
-            var transportManager = new TransportManager(resolver, new InMemoryTransportFactory());
+            var transportManager = new TransportManager(new LogToConsole(), resolver, new InMemoryTransportFactory());
             var start = new ManualResetEvent(false);
             int errorCount = 0;
             int attemptCount = 0;
