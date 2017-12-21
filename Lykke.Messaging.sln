@@ -16,15 +16,15 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{972968
 		.nuget\NuGet.targets = .nuget\NuGet.targets
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lykke.Messaging", "Lykke.Messaging\Lykke.Messaging.csproj", "{0B0AD1E2-95FE-407E-9CEB-85337C653824}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lykke.Messaging", "src\Lykke.Messaging\Lykke.Messaging.csproj", "{0B0AD1E2-95FE-407E-9CEB-85337C653824}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lykke.Messaging.Castle", "Lykke.Messaging.Castle\Lykke.Messaging.Castle.csproj", "{6BD35707-DEFA-4606-98F6-D203CB7A3D2A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lykke.Messaging.Castle", "src\Lykke.Messaging.Castle\Lykke.Messaging.Castle.csproj", "{6BD35707-DEFA-4606-98F6-D203CB7A3D2A}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lykke.Messaging.RabbitMq", "Lykke.Messaging.RabbitMq\Lykke.Messaging.RabbitMq.csproj", "{EEC37FFF-594B-4D42-83D0-54AED64A1A38}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lykke.Messaging.RabbitMq", "src\Lykke.Messaging.RabbitMq\Lykke.Messaging.RabbitMq.csproj", "{EEC37FFF-594B-4D42-83D0-54AED64A1A38}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lykke.Messaging.Tests", "Lykke.Messaging.Tests\Lykke.Messaging.Tests.csproj", "{BF1CA49C-68E2-49FD-913F-1C34C325580F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lykke.Messaging.Tests", "tests\Lykke.Messaging.Tests\Lykke.Messaging.Tests.csproj", "{BF1CA49C-68E2-49FD-913F-1C34C325580F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lykke.Messaging.RabbitMq.Tests", "Lykke.Messaging.RabbitMq.Tests\Lykke.Messaging.RabbitMq.Tests.csproj", "{9DDC7CC7-C03C-4B8D-B62D-5BD4D547E80C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lykke.Messaging.RabbitMq.Tests", "tests\Lykke.Messaging.RabbitMq.Tests\Lykke.Messaging.RabbitMq.Tests.csproj", "{9DDC7CC7-C03C-4B8D-B62D-5BD4D547E80C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
