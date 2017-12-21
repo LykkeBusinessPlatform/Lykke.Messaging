@@ -55,7 +55,7 @@ namespace Lykke.Messaging.RabbitMq
 
                 if (Uri.TryCreate(brokerName, UriKind.Absolute, out uri))
                 {
-                    f.Uri = uri;
+                    f.Uri = uri.ToString();
                 }
                 else
                 {
