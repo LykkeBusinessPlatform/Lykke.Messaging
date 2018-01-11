@@ -134,15 +134,14 @@ namespace Inceptum.Messaging.Utils
         /// <summary>Initializes the scheduler.</summary>
         /// <param name="threadCount">The number of threads to create and use for processing work items.</param>
         /// <param name="capacity">Queue capacity. 0 for unlimited queue</param>
-        public QueuedTaskScheduler(int threadCount,int capacity=0) : this(threadCount,capacity, string.Empty, false, ThreadPriority.Normal, ApartmentState.MTA, 0, null, null) { }
+        public QueuedTaskScheduler(int threadCount,int capacity=0) : this(threadCount,capacity, string.Empty, false, ThreadPriority.Normal, 0, null, null) { }
 
         /// <summary>Initializes the scheduler.</summary>
         /// <param name="threadCount">The number of threads to create and use for processing work items.</param>
         /// <param name="capacity">Queue capacity. 0 for unlimited queue</param>
         /// <param name="threadName">The name to use for each of the created threads.</param>
         /// <param name="useForegroundThreads">A Boolean value that indicates whether to use foreground threads instead of background.</param>
-        /// <param name="threadPriority">The priority to assign to each thread.</param>
-        /// <param name="threadApartmentState">The apartment state to use for each thread.</param>
+        /// <param name="threadPriority">The priority to assign to each thread.</param>        
         /// <param name="threadMaxStackSize">The stack size to use for each thread.</param>
         /// <param name="threadInit">An initialization routine to run on each thread.</param>
         /// <param name="threadFinally">A finalization routine to run on each thread.</param>
@@ -151,8 +150,7 @@ namespace Inceptum.Messaging.Utils
             int capacity,
             string threadName = "",
             bool useForegroundThreads = false,
-            ThreadPriority threadPriority = ThreadPriority.Normal,
-            ApartmentState threadApartmentState = ApartmentState.MTA,
+            ThreadPriority threadPriority = ThreadPriority.Normal,            
             int threadMaxStackSize = 0,
             Action threadInit = null,
             Action threadFinally = null)
@@ -176,8 +174,7 @@ namespace Inceptum.Messaging.Utils
                     Priority = threadPriority,
                     IsBackground = !useForegroundThreads,
                 };
-                if (threadName != null) _threads[i].Name = threadName + " #" + i;
-                _threads[i].SetApartmentState(threadApartmentState);
+                if (threadName != null) _threads[i].Name = threadName + " #" + i;                
             }
 
             // Start all of the threads
