@@ -14,7 +14,8 @@ namespace Inceptum.Messaging.Serialization
         public SerializationManager()
         {
             RegisterSerializerFactory(new JsonSerializerFactory());
-            RegisterSerializerFactory(new ProtobufSerializerFactory());            
+            RegisterSerializerFactory(new ProtobufSerializerFactory());
+            RegisterSerializerFactory(new MessagePackSerializerFactory());
         }
 /*
         public SerializationManager(params ISerializerFactory[] serializerFactories)
