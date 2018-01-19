@@ -1,13 +1,16 @@
-﻿namespace Inceptum.Messaging.Serialization
+﻿using System;
+
+namespace Inceptum.Messaging.Serialization
 {
     internal class MessagePackSerializer<TMessage> : IMessageSerializer<TMessage>
     {
         private readonly MessagePack.IFormatterResolver _formatterResolver;
-
+        private readonly ProtobufSerializer<TMessage> _protobufSerializer;
 
         public MessagePackSerializer()
         {
             _formatterResolver = MessagePack.Resolvers.ContractlessStandardResolver.Instance;
+            _protobufSerializer = new ProtobufSerializer<TMessage>();
         }
 
 
@@ -18,7 +21,15 @@
 
         public TMessage Deserialize(byte[] message)
         {
-            return MessagePack.MessagePackSerializer.Deserialize<TMessage>(message, _formatterResolver);
+            try
+            {
+                return MessagePack.MessagePackSerializer.Deserialize<TMessage>(message, _formatterResolver);
+            }
+            catch (Exception)
+            {
+                return _protobufSerializer.Deserialize(message);
+            }
+            
         }
     }
 }
