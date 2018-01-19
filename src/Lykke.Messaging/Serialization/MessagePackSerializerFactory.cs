@@ -9,5 +9,12 @@
         {
             return new MessagePackSerializer<TMessage>();
         }
+
+
+        public static class Defaults
+        {
+            public static MessagePack.IFormatterResolver FormatterResolver { get; set; }
+                = null;
+        }
     }
 }
