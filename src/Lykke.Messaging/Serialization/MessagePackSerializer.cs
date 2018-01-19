@@ -1,33 +1,24 @@
-﻿using System;
-using System.IO;
-
-namespace Inceptum.Messaging.Serialization
+﻿namespace Inceptum.Messaging.Serialization
 {
     internal class MessagePackSerializer<TMessage> : IMessageSerializer<TMessage>
     {
-        private readonly MsgPack.Serialization.MessagePackSerializer<TMessage> _serializer;
+        private readonly MessagePack.IFormatterResolver _formatterResolver;
+
 
         public MessagePackSerializer()
         {
-            _serializer = MsgPack.Serialization.MessagePackSerializer.Get<TMessage>();
+            _formatterResolver = MessagePack.Resolvers.ContractlessStandardResolver.Instance;
         }
+
 
         public byte[] Serialize(TMessage message)
         {
-            using (var stream = new MemoryStream())
-            {
-                _serializer.Pack(stream, message);
-
-                return stream.ToArray();
-            }
+            return MessagePack.MessagePackSerializer.Serialize(message, _formatterResolver);
         }
 
         public TMessage Deserialize(byte[] message)
         {
-            using (var stream = new MemoryStream(message))
-            {
-                return _serializer.Unpack(stream);
-            }
+            return MessagePack.MessagePackSerializer.Deserialize<TMessage>(message, _formatterResolver);
         }
     }
 }
