@@ -1,4 +1,4 @@
-﻿namespace Inceptum.Messaging
+﻿namespace Lykke.Messaging
 {
     public interface ISerializerFactory
     {

@@ -1,16 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Configuration;
 using Castle.Core;
 using Castle.MicroKernel;
 using Castle.MicroKernel.Context;
-using Inceptum.Messaging.Contract;
+using Lykke.Messaging.Contract;
 
-namespace Inceptum.Messaging.Configuration
+namespace Lykke.Messaging.Configuration
 {
     public class EndpointResolver : IEndpointProvider, ISubDependencyResolver
     {
         private readonly Dictionary<string, Endpoint> m_Endpoints;
+
         public EndpointResolver(IDictionary<string, Endpoint> endpoints)
         {
             m_Endpoints = new Dictionary<string, Endpoint>(endpoints, StringComparer.InvariantCultureIgnoreCase);
@@ -29,8 +29,11 @@ namespace Inceptum.Messaging.Configuration
             return m_Endpoints[endpointName];
         }
 
-        public bool CanResolve(CreationContext context, ISubDependencyResolver parentResolver,
-                               ComponentModel model, DependencyModel dependency)
+        public bool CanResolve(
+            CreationContext context,
+            ISubDependencyResolver parentResolver,
+            ComponentModel model,
+            DependencyModel dependency)
         {
             if (dependency.TargetItemType != typeof(Endpoint)) return false;
 
@@ -38,8 +41,11 @@ namespace Inceptum.Messaging.Configuration
             return this.Contains(endpointName);
         }
 
-        public object Resolve(CreationContext context, ISubDependencyResolver parentResolver,
-                              ComponentModel model, DependencyModel dependency)
+        public object Resolve(
+            CreationContext context,
+            ISubDependencyResolver parentResolver,
+            ComponentModel model,
+            DependencyModel dependency)
         {
             var endpointName = getEndpointName(model, dependency);
             return this.Get(endpointName);

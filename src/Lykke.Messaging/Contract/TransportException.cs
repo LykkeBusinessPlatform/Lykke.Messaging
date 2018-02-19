@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.Serialization;
 
-namespace Inceptum.Messaging.Contract
+namespace Lykke.Messaging.Contract
 {
     //TODO: use instead of processing exception in messaging
     public class TransportException : Exception
@@ -30,5 +30,4 @@ namespace Inceptum.Messaging.Contract
         {
         }
     }
-
 }

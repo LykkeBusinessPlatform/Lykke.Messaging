@@ -1,17 +1,15 @@
 ﻿using System;
 
-namespace Inceptum.Messaging.Serialization
+namespace Lykke.Messaging.Serialization
 {
     internal class MessagePackSerializer<TMessage> : IMessageSerializer<TMessage>
     {
         private readonly ProtobufSerializer<TMessage> _protobufSerializer;
 
-
         public MessagePackSerializer()
         {
             _protobufSerializer = new ProtobufSerializer<TMessage>();
         }
-
 
         public byte[] Serialize(TMessage message)
         {
@@ -28,7 +26,6 @@ namespace Inceptum.Messaging.Serialization
             {
                 return _protobufSerializer.Deserialize(message);
             }
-            
         }
     }
 }

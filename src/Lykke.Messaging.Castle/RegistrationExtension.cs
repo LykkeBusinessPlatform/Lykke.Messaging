@@ -1,7 +1,7 @@
 ﻿using System.Linq;
 using Castle.MicroKernel.Registration;
 
-namespace Inceptum.Messaging.Castle
+namespace Lykke.Messaging.Castle
 {
     public static class RegistrationExtensions
     {
@@ -10,6 +10,5 @@ namespace Inceptum.Messaging.Castle
         {
             return r.ExtendedProperties(new { MessageHandlerFor = endpoints }).WithEndpoints(endpoints.ToDictionary(name => name));
         }
-         
     }
 }

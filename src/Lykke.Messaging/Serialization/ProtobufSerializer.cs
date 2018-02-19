@@ -1,19 +1,15 @@
 ﻿using System.IO;
 using ProtoBuf;
 
-namespace Inceptum.Messaging.Serialization
+namespace Lykke.Messaging.Serialization
 {
     internal class ProtobufSerializer<TMessage> : IMessageSerializer<TMessage>
     {
-
-
-
         public byte[] Serialize(TMessage message)
         {
             var s = new MemoryStream();
             Serializer.Serialize(s, message);
             return s.ToArray();
-            
         }
 
         public TMessage Deserialize(byte[] message)

@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Inceptum.Messaging.Transports
+namespace Lykke.Messaging.Transports
 {
     public class BinaryMessage
     {

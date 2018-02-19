@@ -1,11 +1,12 @@
 ﻿using System.Linq;
 using ProtoBuf;
 
-namespace Inceptum.Messaging.Serialization
+namespace Lykke.Messaging.Serialization
 {
-    public class ProtobufSerializerFactory:ISerializerFactory
+    public class ProtobufSerializerFactory : ISerializerFactory
     {
-        public string SerializationFormat {
+        public string SerializationFormat
+        {
             get { return "protobuf"; }
         }
 
@@ -13,7 +14,7 @@ namespace Inceptum.Messaging.Serialization
         {
             //TODO: may affect performance
             if (
-                typeof(TMessage).GetCustomAttributes(typeof(ProtoContractAttribute),false).Any()
+                typeof(TMessage).GetCustomAttributes(typeof(ProtoContractAttribute), false).Any()
                 )
                 return new ProtobufSerializer<TMessage>() ;
             return null;

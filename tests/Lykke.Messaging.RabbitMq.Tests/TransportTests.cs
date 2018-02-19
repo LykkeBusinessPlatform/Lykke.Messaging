@@ -5,9 +5,9 @@ using System.Reflection;
 using System.Threading;
 using Castle.Core.Logging;
 using Common.Log;
-using Inceptum.Messaging.Contract;
-using Inceptum.Messaging.Serialization;
-using Inceptum.Messaging.Transports;
+using Lykke.Messaging.Contract;
+using Lykke.Messaging.Serialization;
+using Lykke.Messaging.Transports;
 using Lykke.Messaging;
 using Lykke.Messaging.RabbitMq;
 using NLog;
@@ -16,7 +16,7 @@ using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
 using ThreadState = System.Threading.ThreadState;
 
-namespace Inceptum.Messaging.RabbitMq.Tests
+namespace Lykke.Messaging.RabbitMq.Tests
 {
     [TestFixture]
     public class TransportTests

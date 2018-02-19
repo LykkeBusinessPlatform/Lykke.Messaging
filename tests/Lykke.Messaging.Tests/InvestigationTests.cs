@@ -6,7 +6,7 @@ using System.Text;
 using NUnit.Framework;
 using Rhino.Mocks;
 
-namespace Inceptum.Messaging.Tests
+namespace Lykke.Messaging.Tests
 {
     [TestFixture]
     public class SerializationManagerExtensionsTests

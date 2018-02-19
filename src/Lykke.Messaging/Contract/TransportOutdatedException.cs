@@ -1,4 +1,4 @@
-﻿namespace Inceptum.Messaging.Contract
+﻿namespace Lykke.Messaging.Contract
 {
     public class TransportOutdatedException : TransportException
     {

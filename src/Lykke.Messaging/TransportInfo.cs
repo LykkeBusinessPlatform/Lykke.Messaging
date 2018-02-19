@@ -1,27 +1,16 @@
 ﻿using System;
-using System.Collections.Generic;
 
-namespace Inceptum.Messaging
+namespace Lykke.Messaging
 {
-    public class ProcessingGroupInfo
-    {
-        public ProcessingGroupInfo()
-        {
-            ConcurrencyLevel = 0;
-            QueueCapacity = 1024;
-        }
-
-        public ProcessingGroupInfo(ProcessingGroupInfo info)
-        {
-            ConcurrencyLevel = info.ConcurrencyLevel;
-            QueueCapacity = info.QueueCapacity;
-        }
-
-        public uint ConcurrencyLevel { get; set; }
-        public uint QueueCapacity { get; set; }
-    }
     public class TransportInfo
     {
+        public string Broker { get; private set; }
+        public string Login { get; private set; }
+        public string Password { get; private set; }
+        public string JailStrategyName { get; private set; }
+        public JailStrategy JailStrategy { get; internal set; }
+        public string Messaging { get; private set; }
+
         public TransportInfo(string broker, string login, string password, string jailStrategyName, string messaging="InMemory")
         {
             if (string.IsNullOrEmpty((broker ?? "").Trim())) throw new ArgumentException("broker should be not empty string", "broker");
@@ -34,24 +23,15 @@ namespace Inceptum.Messaging
             Messaging = messaging;
         }
 
-        public string Broker { get; private set; }
-        public string Login { get; private set; }
-        public string Password { get; private set; }
-        public string JailStrategyName { get; private set; }
-
-
-
-        public JailStrategy JailStrategy { get; internal set; }
-
-        public string Messaging { get; private set; }
-
-
         protected bool Equals(TransportInfo other)
         {
-            return string.Equals(Broker, other.Broker) && string.Equals(Login, other.Login) && string.Equals(Password, other.Password) && string.Equals(Messaging, other.Messaging) && string.Equals(JailStrategyName, other.JailStrategyName);
+            return string.Equals(Broker, other.Broker)
+                && string.Equals(Login, other.Login)
+                && string.Equals(Password, other.Password)
+                && string.Equals(Messaging, other.Messaging)
+                && string.Equals(JailStrategyName, other.JailStrategyName);
         }
 
-    
         public static bool operator ==(TransportInfo left, TransportInfo right)
         {
             return Equals(left, right);

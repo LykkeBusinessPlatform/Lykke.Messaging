@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 
-namespace Inceptum.Messaging.Transports
+namespace Lykke.Messaging.Transports
 {
     public class RequestHandle : IDisposable
     {
@@ -10,7 +10,6 @@ namespace Inceptum.Messaging.Transports
         private readonly ManualResetEvent m_IsComplete = new ManualResetEvent(false);
         private readonly Action<BinaryMessage> m_Callback;
         private readonly Action m_FinishRequest;
-
 
         internal DateTime DueDate { get; set; }
         internal bool IsComplete
@@ -23,7 +22,6 @@ namespace Inceptum.Messaging.Transports
             m_FinishRequest = finishRequest;
             m_Callback = callback;
             m_Subscription = subscriber(acceptResponse);
-
         }
 
         internal bool Await(int timeout)

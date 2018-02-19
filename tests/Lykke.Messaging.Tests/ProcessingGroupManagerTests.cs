@@ -7,14 +7,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using Castle.Core.Internal;
 using Common.Log;
-using Inceptum.Messaging.Contract;
-using Inceptum.Messaging.InMemory;
-using Inceptum.Messaging.Transports;
+using Lykke.Messaging.Contract;
+using Lykke.Messaging.InMemory;
+using Lykke.Messaging.Transports;
 using Lykke.Messaging;
 using NUnit.Framework;
 using Rhino.Mocks;
 
-namespace Inceptum.Messaging.Tests
+namespace Lykke.Messaging.Tests
 {
     [TestFixture]
     public class ProcessingGroupManagerTests

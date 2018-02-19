@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.Serialization;
 
-namespace Inceptum.Messaging
+namespace Lykke.Messaging
 {
     public class ProcessingException : Exception
     {

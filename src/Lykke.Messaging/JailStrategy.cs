@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Inceptum.Messaging
+namespace Lykke.Messaging
 {
     public class JailStrategy
     {
