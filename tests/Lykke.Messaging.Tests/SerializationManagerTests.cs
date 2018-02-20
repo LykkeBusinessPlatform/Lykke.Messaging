@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Inceptum.Messaging.Serialization;
+using Lykke.Messaging.Serialization;
 using NUnit.Framework;
 using Rhino.Mocks;
 
-namespace Inceptum.Messaging.Tests
+namespace Lykke.Messaging.Tests
 {
     [TestFixture]
     public class SerializationManagerTests

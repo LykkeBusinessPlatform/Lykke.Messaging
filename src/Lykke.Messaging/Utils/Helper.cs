@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading;
 
-namespace Inceptum.Messaging.Utils
+namespace Lykke.Messaging.Utils
 {
     public class Helper
     {

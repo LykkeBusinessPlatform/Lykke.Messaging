@@ -6,15 +6,15 @@ using Castle.Facilities.Startable;
 using Castle.MicroKernel.Registration;
 using Castle.MicroKernel.Resolvers.SpecializedResolvers;
 using Castle.Windsor;
-using Inceptum.Messaging.Castle;
-using Inceptum.Messaging.Configuration;
-using Inceptum.Messaging.Contract;
-using Inceptum.Messaging.InMemory;
+using Lykke.Messaging.Castle;
+using Lykke.Messaging.Configuration;
+using Lykke.Messaging.Contract;
+using Lykke.Messaging.InMemory;
 using Lykke.Messaging;
 using NUnit.Framework;
 using Rhino.Mocks;
 
-namespace Inceptum.Messaging.Tests.Castle
+namespace Lykke.Messaging.Tests.Castle
 {
     [TestFixture]
     public class MessagingFacilityTests

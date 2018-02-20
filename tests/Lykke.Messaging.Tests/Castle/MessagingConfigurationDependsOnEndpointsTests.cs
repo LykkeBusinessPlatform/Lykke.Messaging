@@ -4,12 +4,12 @@ using System.Linq;
 using System.Text;
 using Castle.MicroKernel.Registration;
 using Castle.Windsor;
-using Inceptum.Messaging.Castle;
-using Inceptum.Messaging.Configuration;
-using Inceptum.Messaging.Contract;
+using Lykke.Messaging.Castle;
+using Lykke.Messaging.Configuration;
+using Lykke.Messaging.Contract;
 using NUnit.Framework;
 
-namespace Inceptum.Messaging.Tests.Castle
+namespace Lykke.Messaging.Tests.Castle
 {
     [TestFixture]
     public class MessagingConfigurationDependsOnEndpointsTests

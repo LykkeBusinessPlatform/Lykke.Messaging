@@ -8,9 +8,9 @@ using Castle.Core;
 using Castle.MicroKernel;
 using Castle.MicroKernel.ComponentActivator;
 using Castle.MicroKernel.Context;
-using Inceptum.Messaging.Contract;
+using Lykke.Messaging.Contract;
 
-namespace Inceptum.Messaging.Castle
+namespace Lykke.Messaging.Castle
 {
     public class MessageHandlerActivator : DefaultComponentActivator 
     {
@@ -22,10 +22,14 @@ namespace Inceptum.Messaging.Castle
         private CompositeDisposable m_Subscriptions;
         private object m_Lock=new object();
 
-        public MessageHandlerActivator(ComponentModel model, IKernelInternal kernel, ComponentInstanceDelegate onCreation, ComponentInstanceDelegate onDestruction) : base(model, kernel, onCreation, onDestruction)
+        public MessageHandlerActivator(
+            ComponentModel model,
+            IKernelInternal kernel,
+            ComponentInstanceDelegate onCreation,
+            ComponentInstanceDelegate onDestruction)
+            : base(model, kernel, onCreation, onDestruction)
         {
             m_Endpoints=model.ExtendedProperties["MessageHandlerFor"] as string[];
-         
         }
 
         private IMessagingEngine MessagingEngine
@@ -48,15 +52,15 @@ namespace Inceptum.Messaging.Castle
         public override object Create(CreationContext context, Burden burden)
         {
             var component = base.Create(context, burden);
-            wireDefault(component);
-            var types = wire(component).ToArray();
+            WireDefault(component);
+            var types = Wire(component).ToArray();
 
             m_Subscriptions = new CompositeDisposable(
                 m_Endpoints.Select(endpoint =>
                     MessagingEngine.Subscribe(
-                        (Endpoint) Kernel.Resolver.Resolve(context, context.Handler, Model, new DependencyModel(endpoint,typeof(Endpoint),false)) ,
-                        dispatch,
-                        dispatchUnknown,
+                        (Endpoint) Kernel.Resolver.Resolve(context, context.Handler, Model, new DependencyModel(endpoint, typeof(Endpoint), false)) ,
+                        Dispatch,
+                        DispatchUnknown,
                         types))
                     .ToArray());
             return component;
@@ -68,7 +72,7 @@ namespace Inceptum.Messaging.Castle
             base.Destroy(instance);
         }
 
-        private void dispatchUnknown(string type, AcknowledgeDelegate acknowledge)
+        private void DispatchUnknown(string type, AcknowledgeDelegate acknowledge)
         {
             if (m_HandlerDefault == null)
             {
@@ -86,10 +90,9 @@ namespace Inceptum.Messaging.Castle
             {
                 acknowledge(0, true);
             }
-
         }
 
-        private void dispatch(object message, AcknowledgeDelegate acknowledge, Dictionary<string, string> headers)
+        private void Dispatch(object message, AcknowledgeDelegate acknowledge, Dictionary<string, string> headers)
         {
             Func<object, CommandHandlingResult> handler;
             if (!m_Handlers.TryGetValue(message.GetType(), out handler))
@@ -108,14 +111,14 @@ namespace Inceptum.Messaging.Castle
             }
         }
 
-        private IEnumerable<Type> wire(object component)
+        private IEnumerable<Type> Wire(object component)
         {
             if (component == null) throw new ArgumentNullException("o");
 
             var handleMethods = component.GetType().GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
                 .Where(m => m.Name == "Handle" &&
                             !m.IsGenericMethod &&
-                            m.GetParameters().Length ==1 &&
+                            m.GetParameters().Length == 1 &&
                             !m.GetParameters().First().ParameterType.IsInterface)
                 .Select(m => new
                 {
@@ -126,14 +129,12 @@ namespace Inceptum.Messaging.Castle
 
             foreach (var method in handleMethods)
             {
-                registerHandler(method.messageType, component, method.returnsResult);
+                RegisterHandler(method.messageType, component, method.returnsResult);
                 yield return method.messageType;
             }
-
         }
 
-
-        private void registerHandler(Type commandType, object o,  bool returnsResult)
+        private void RegisterHandler(Type commandType, object o,  bool returnsResult)
         {
             var command = Expression.Parameter(typeof(object), "command");
             Expression[] parameters =
@@ -156,8 +157,7 @@ namespace Inceptum.Messaging.Castle
             m_Handlers.Add(commandType, lambda.Compile());
         }
 
-
-        private void wireDefault(object component)
+        private void WireDefault(object component)
         {
             if (component == null) throw new ArgumentNullException("o");
 
@@ -168,11 +168,11 @@ namespace Inceptum.Messaging.Castle
 
             if (handleMethod != null)
             {
-                registerDefaultHandler(component);
+                RegisterDefaultHandler(component);
             }
         }
 
-        private void registerDefaultHandler(object o)
+        private void RegisterDefaultHandler(object o)
         {
             var typeParameter = Expression.Parameter(typeof(string), "type");
             Expression[] parameters = new Expression[] { typeParameter }.ToArray();

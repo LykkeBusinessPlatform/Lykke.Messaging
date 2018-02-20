@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace Inceptum.Messaging.Tests
+namespace Lykke.Messaging.Tests
 {
     internal class FakeStringSerializer : IMessageSerializer<string>
     {

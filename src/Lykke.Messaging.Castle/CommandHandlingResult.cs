@@ -1,4 +1,4 @@
-﻿namespace Inceptum.Messaging.Castle
+﻿namespace Lykke.Messaging.Castle
 {
     //TODO: use this class in CQRS engine (there is a copy paste)
     public class CommandHandlingResult

@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Threading;
 
-namespace Inceptum.Core.Utils
+namespace Lykke.Core.Utils
 {
     public class CountingTracker
     {
         private readonly ManualResetEvent m_IsEmpty = new ManualResetEvent(true);
         private int m_Count;
 
-        private class DisposableTrack:IDisposable
+        private class DisposableTrack : IDisposable
         {
             private readonly Action m_Dispose;
 
@@ -27,10 +27,10 @@ namespace Inceptum.Core.Utils
         {
             Interlocked.Increment(ref m_Count);
             m_IsEmpty.Reset();
-            return new DisposableTrack(decrement);
+            return new DisposableTrack(Decrement);
         }
 
-        private void decrement()
+        private void Decrement()
         {
             if(Interlocked.Decrement(ref m_Count)==0)
                 m_IsEmpty.Set();

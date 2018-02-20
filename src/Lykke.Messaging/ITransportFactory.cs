@@ -1,7 +1,6 @@
 ﻿using System;
 using Common.Log;
-using Inceptum.Messaging;
-using Inceptum.Messaging.Transports;
+using Lykke.Messaging.Transports;
 
 namespace Lykke.Messaging
 {

@@ -2,16 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Reactive.Disposables;
 using System.Reactive.Subjects;
-using Inceptum.Messaging.Contract;
-using Inceptum.Messaging.Transports;
+using Lykke.Messaging.Contract;
+using Lykke.Messaging.Transports;
 
-namespace Inceptum.Messaging.InMemory
+namespace Lykke.Messaging.InMemory
 {
     internal class InMemoryTransport : ITransport
     {
         private readonly List<InMemorySession> m_Sessions = new List<InMemorySession>();
         private readonly Dictionary<string, Subject<BinaryMessage>> m_Topics = new Dictionary<string, Subject<BinaryMessage>>();
-
 
         public Subject<BinaryMessage> this[string name]
         {
@@ -52,12 +51,15 @@ namespace Inceptum.Messaging.InMemory
             }
         }
 
-        public bool VerifyDestination(Destination destination, EndpointUsage usage, bool configureIfRequired, out string error)
+        public bool VerifyDestination(
+            Destination destination,
+            EndpointUsage usage,
+            bool configureIfRequired,
+            out string error)
         {
             error = null;
             return true;
         }
-
 
         public IDisposable CreateTemporary(string name)
         {

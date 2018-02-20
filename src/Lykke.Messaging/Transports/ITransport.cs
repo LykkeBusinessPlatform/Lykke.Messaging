@@ -1,9 +1,8 @@
 ﻿using System;
-using Inceptum.Messaging.Contract;
+using Lykke.Messaging.Contract;
 
-namespace Inceptum.Messaging.Transports
+namespace Lykke.Messaging.Transports
 {
-
     public interface ITransport : IDisposable
     {
         IMessagingSession CreateSession(Action onFailure);

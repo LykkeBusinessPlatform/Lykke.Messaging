@@ -1,9 +1,9 @@
 ﻿using System.Text;
 using Newtonsoft.Json;
 
-namespace Inceptum.Messaging.Serialization
+namespace Lykke.Messaging.Serialization
 {
-    class JsonSerializer<TMessage> : IMessageSerializer<TMessage>
+    internal class JsonSerializer<TMessage> : IMessageSerializer<TMessage>
     {
         public byte[] Serialize(TMessage message)
         {

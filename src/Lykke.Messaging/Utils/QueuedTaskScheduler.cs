@@ -14,7 +14,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Inceptum.Messaging.Utils
+namespace Lykke.Messaging.Utils
 {
     /// <summary>
     /// Provides a TaskScheduler that provides control over priorities, fairness, and the underlying threads utilized.
@@ -33,8 +33,7 @@ namespace Inceptum.Messaging.Utils
             /// <param name="scheduler">The scheduler.</param>
             public QueuedTaskSchedulerDebugView(QueuedTaskScheduler scheduler)
             {
-                if (scheduler == null) throw new ArgumentNullException("scheduler");
-                _scheduler = scheduler;
+                _scheduler = scheduler ?? throw new ArgumentNullException("scheduler");
             }
 
             /// <summary>Gets all of the Tasks queued to the scheduler directly.</summary>

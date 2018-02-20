@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using Common.Log;
-using Inceptum.Messaging.Transports;
-using Lykke.Messaging;
+using Lykke.Messaging.Transports;
 
-namespace Inceptum.Messaging.InMemory
+namespace Lykke.Messaging.InMemory
 {
     internal class InMemoryTransportFactory : ITransportFactory
     {

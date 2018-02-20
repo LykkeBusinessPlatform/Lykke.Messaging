@@ -1,24 +1,29 @@
 ﻿using System;
 using System.Linq;
 using Common.Log;
-using Inceptum.Messaging.Transports;
-using Lykke.Messaging;
-using Lykke.Messaging.RabbitMq;
+using Lykke.Messaging.Transports;
 
-namespace Inceptum.Messaging.RabbitMq
+namespace Lykke.Messaging.RabbitMq
 {
     /// <summary>
     /// Implementation of <see cref="ITransportFactory"/> interface for RabbitMQ
     /// </summary>
     public class RabbitMqTransportFactory : ITransportFactory
     {
+        private readonly bool m_ShuffleBrokers;
+        private readonly TimeSpan? m_AutomaticRecoveryInterval;
+
+        public string Name
+        {
+            get { return "RabbitMq"; }
+        }
+
         /// <summary>
         /// Creates new instance of <see cref="RabbitMqTransportFactory"/> with RabbitMQ native automatic recovery disabled
         /// </summary>
         public RabbitMqTransportFactory()
             : this(true, default (TimeSpan?))
         {
-
         }
 
         /// <summary>
@@ -28,7 +33,6 @@ namespace Inceptum.Messaging.RabbitMq
         public RabbitMqTransportFactory(TimeSpan automaticRecoveryInterval)
              : this(true, automaticRecoveryInterval)
         {
-
         }
 
         /// <summary>
@@ -42,14 +46,6 @@ namespace Inceptum.Messaging.RabbitMq
         {
             m_ShuffleBrokers = shuffleBrokers;
             m_AutomaticRecoveryInterval = automaticRecoveryInterval;
-        }
-
-        private readonly bool m_ShuffleBrokers;
-        private readonly TimeSpan? m_AutomaticRecoveryInterval;
-
-        public string Name
-        {
-            get { return "RabbitMq"; }
         }
 
         public ITransport Create(ILog log, TransportInfo transportInfo, Action onFailure)

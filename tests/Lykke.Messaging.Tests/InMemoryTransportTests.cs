@@ -6,12 +6,12 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Inceptum.Messaging.InMemory;
-using Inceptum.Messaging.Transports;
+using Lykke.Messaging.InMemory;
+using Lykke.Messaging.Transports;
 using NUnit.Framework;
 using ThreadState = System.Threading.ThreadState;
 
-namespace Inceptum.Messaging.Tests
+namespace Lykke.Messaging.Tests
 {
     // ReSharper disable InconsistentNaming
     // ReSharper disable PossibleNullReferenceException

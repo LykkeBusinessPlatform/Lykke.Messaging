@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 
-namespace Inceptum.Messaging.Serialization
+namespace Lykke.Messaging.Serialization
 {
     public class SerializationManager : ISerializationManager
     {
@@ -33,7 +33,6 @@ namespace Inceptum.Messaging.Serialization
         {
             return ExtractSerializer<TMessage>(format).Serialize(message);
         }
-
 
         /// <summary>
         /// Deserializes the specified message to application type.
@@ -131,7 +130,11 @@ namespace Inceptum.Messaging.Serialization
             IMessageSerializer<TMessage>[] serializers;
             lock (m_SerializerFactories)
             {
-                serializers = m_SerializerFactories.Where(f=>f.SerializationFormat.ToLower()==format.ToLower()).Select(f => f.Create<TMessage>()).Where(s => s != null).ToArray();
+                serializers = m_SerializerFactories
+                    .Where(f => f.SerializationFormat.ToLower() == format.ToLower())
+                    .Select(f => f.Create<TMessage>())
+                    .Where(s => s != null)
+                    .ToArray();
             }
             switch (serializers.Length)
             {
@@ -161,10 +164,9 @@ namespace Inceptum.Messaging.Serialization
                         m_SerializerLock.ExitUpgradeableReadLock();
                     }
                 case 0:
-                    throw new ProcessingException(string.Format("{1} serializer for type {0} not found", typeof (TMessage),format));
+                    throw new ProcessingException($"{format} serializer for type {typeof(TMessage)} not found");
                 default:
-                    throw new ProcessingException(
-                        string.Format("More than one {1} serializer is available for for type {0}", typeof (TMessage),format));
+                    throw new ProcessingException($"More than one {format} serializer is available for for type {typeof(TMessage)}");
             }
         }
     }

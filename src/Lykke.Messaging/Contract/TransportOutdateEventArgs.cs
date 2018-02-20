@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Inceptum.Messaging.Contract
+namespace Lykke.Messaging.Contract
 {
     public class TransportOutdateEventArgs : EventArgs
     {
@@ -8,11 +8,9 @@ namespace Inceptum.Messaging.Contract
         public string TransportName { get; private set; }
 //        internal TransportResolutionTag TransportTag { get; private set; }
 
-
         internal TransportOutdateEventArgs(string message, string transportName)
         {
-            if (transportName == null) throw new ArgumentNullException("transportName");
-            TransportName = transportName;
+            TransportName = transportName ?? throw new ArgumentNullException("transportName");
             Message = message??"";
         }
 

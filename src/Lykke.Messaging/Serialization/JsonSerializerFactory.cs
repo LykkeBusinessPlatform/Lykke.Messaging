@@ -1,4 +1,4 @@
-﻿namespace Inceptum.Messaging.Serialization
+﻿namespace Lykke.Messaging.Serialization
 {
     public class JsonSerializerFactory : ISerializerFactory
     {

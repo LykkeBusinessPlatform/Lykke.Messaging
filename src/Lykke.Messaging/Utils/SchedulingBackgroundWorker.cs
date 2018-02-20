@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 
-namespace Inceptum.Core.Utils
+namespace Lykke.Core.Utils
 {
     public class SchedulingBackgroundWorker : IDisposable
     {
@@ -22,13 +22,11 @@ namespace Inceptum.Core.Utils
         public SchedulingBackgroundWorker(string name, Action doWork, bool start = true)
         {
             m_StopEvent = new ManualResetEvent(!start);
-            if (doWork == null) throw new ArgumentNullException("doWork");
-            m_DoWork = doWork;
-            m_Thread = new Thread(worker){Name = name};
+            m_DoWork = doWork ?? throw new ArgumentNullException("doWork");
+            m_Thread = new Thread(Worker){Name = name};
             if(start)
                 m_Thread.Start();
         }
-
 
         public void Start()
         {
@@ -38,20 +36,20 @@ namespace Inceptum.Core.Utils
                 m_Thread.Start();
             }
         }
-        
-        private void worker()
+
+        private void Worker()
         {
             var timeout = -1;
             bool stop = false;
             while (!stop)
             {
-                if(WaitHandle.WaitAny(new WaitHandle[] {m_StopEvent, m_ScheduleEvent}, timeout)==0)
-                        stop = true;
-                timeout=doWorkIfRequired();
+                if(WaitHandle.WaitAny(new WaitHandle[] {m_StopEvent, m_ScheduleEvent}, timeout) == 0)
+                    stop = true;
+                timeout=DoWorkIfRequired();
             }
         }
 
-        private int doWorkIfRequired()
+        private int DoWorkIfRequired()
         {
             var now = DateTime.Now; 
             int timeout = -1;
@@ -81,7 +79,6 @@ namespace Inceptum.Core.Utils
 
             return timeout;
         }
-
 
         public void Schedule(long ms)
         {

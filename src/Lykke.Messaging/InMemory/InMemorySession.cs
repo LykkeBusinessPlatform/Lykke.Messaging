@@ -3,10 +3,10 @@ using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Threading;
-using Inceptum.Messaging.Contract;
-using Inceptum.Messaging.Transports;
+using Lykke.Messaging.Contract;
+using Lykke.Messaging.Transports;
 
-namespace Inceptum.Messaging.InMemory
+namespace Lykke.Messaging.InMemory
 {
     internal class InMemorySession : IMessagingSession
     {
@@ -26,7 +26,6 @@ namespace Inceptum.Messaging.InMemory
             m_Transport.CreateTemporary(name);
             return name;
         }
-
 
         public void Send(string destination, BinaryMessage message, int ttl)
         {
@@ -76,7 +75,6 @@ namespace Inceptum.Messaging.InMemory
             }, messageType);
             return subscription;
         }
-
 
         public void Dispose()
         {

@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
-using Inceptum.Messaging.Contract;
+using Lykke.Messaging.Contract;
 
-namespace Inceptum.Messaging.Configuration
+namespace Lykke.Messaging.Configuration
 {
     public interface IMessagingConfiguration
     {
