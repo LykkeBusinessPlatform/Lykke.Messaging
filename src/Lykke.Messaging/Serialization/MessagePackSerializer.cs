@@ -38,9 +38,13 @@ namespace Lykke.Messaging.Serialization
             catch (Exception ex)
             {
                 if (_fallbackDeserializerWorks)
-                    _log.Warning("MessagePack deserializer failed, using ProtoBuf", ex);
+                {
+                    _log.WriteWarning(nameof(Deserialize), message, "MessagePack deserializer failed, using ProtoBuf");
+                }
                 else
-                    _log.Error(ex);
+                {
+                    _log.WriteError(nameof(Deserialize), message, ex);
+                }
                 try
                 {
                     var result = _protobufSerializer.Deserialize(message);
