@@ -68,7 +68,6 @@ namespace Lykke.Messaging
         {
             AddId(endpoint.TransportId);
 
-            var transport = Transport;
             MessagingSessionWrapper messagingSession;
 
             lock (m_MessagingSessions)
@@ -82,7 +81,7 @@ namespace Lykke.Messaging
                         : new MessagingSessionWrapper(_logFactory, endpoint.TransportId, name);
 
                     messagingSession.SetSession(
-                        transport.CreateSession(Helper.CallOnlyOnce(() => ProcessSessionFailure(messagingSession)), endpoint.Destination));
+                        Transport.CreateSession(Helper.CallOnlyOnce(() => ProcessSessionFailure(messagingSession)), endpoint.Destination));
                     m_MessagingSessions.Add(messagingSession);
                 }
             }
@@ -145,8 +144,7 @@ namespace Lykke.Messaging
             bool configureIfRequired,
             out string error)
         {
-            var transport = Transport;
-            return transport.VerifyDestination(
+            return Transport.VerifyDestination(
                 destination,
                 usage,
                 configureIfRequired,

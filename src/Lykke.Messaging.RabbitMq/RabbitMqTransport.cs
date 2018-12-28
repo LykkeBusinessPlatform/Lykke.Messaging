@@ -269,28 +269,43 @@ namespace Lykke.Messaging.RabbitMq
                 {
                     using (IModel channel = connection.CreateModel())
                     {
-                        if (publish.ExchangeName == "" && publish.ExchangeType.ToLower() == "direct")
+                        switch (usage)
                         {
-                            //default exchange should not be verified since it always exists and publication to it is always possible
-                        }
-                        else
-                        {
-                            if (configureIfRequired)
-                                channel.ExchangeDeclare(publish.ExchangeName, publish.ExchangeType, true);
-                            else
-                                channel.ExchangeDeclarePassive(publish.ExchangeName);
-                        }
+                            case EndpointUsage.None:
+                            case EndpointUsage.Publish:
+                                //default exchange should not be verified since it always exists and publication to it is always possible
+                                if (publish.ExchangeName == "" && publish.ExchangeType.ToLower() == "direct")
+                                    break;
 
-                        //temporary queue should not be verified since it is not supported by rmq client
-                        if((usage & EndpointUsage.Subscribe) == EndpointUsage.Subscribe && !destination.Subscribe.ToLower().StartsWith("amq."))
-                        {
-                            if (configureIfRequired)
-                                channel.QueueDeclare(destination.Subscribe, true, false, false, null);
-                            else
-                                channel.QueueDeclarePassive(destination.Subscribe);
+                                if (configureIfRequired)
+                                    channel.ExchangeDeclare(publish.ExchangeName, publish.ExchangeType, durable: true);
+                                else
+                                    channel.ExchangeDeclarePassive(publish.ExchangeName);
+                                break;
+                            case EndpointUsage.Subscribe:
+                                //temporary queue should not be verified since it is not supported by rmq client
+                                if (destination.Subscribe.ToLower().StartsWith("amq."))
+                                    break;
 
-                            if (configureIfRequired)
-                                channel.QueueBind(destination.Subscribe, publish.ExchangeName, publish.RoutingKey == "" ? "#" : publish.RoutingKey);
+                                if (configureIfRequired)
+                                {
+                                    channel.QueueDeclare(
+                                        queue: destination.Subscribe,
+                                        durable: destination.IsDurable,
+                                        exclusive: false,
+                                        autoDelete: false);
+                                    channel.QueueBind(
+                                        queue: destination.Subscribe,
+                                        exchange: publish.ExchangeName,
+                                        routingKey: publish.RoutingKey == "" ? "#" : publish.RoutingKey);
+                                }
+                                else
+                                {
+                                    channel.QueueDeclarePassive(destination.Subscribe);
+                                }
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException(nameof(usage), usage, null);
                         }
                     }
                 }
