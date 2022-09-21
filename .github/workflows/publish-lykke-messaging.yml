@@ -3,6 +3,8 @@ on:
   push:
     tags: 
       - '*'
+    paths:
+      - src/Lykke.Messaging/**
 jobs:
   build:
     runs-on: ubuntu-latest
