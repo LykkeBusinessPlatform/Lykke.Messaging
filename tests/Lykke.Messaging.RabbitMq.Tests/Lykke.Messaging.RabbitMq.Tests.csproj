@@ -22,7 +22,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Lykke.Messaging.Castle\Lykke.Messaging.Castle.csproj" />
     <ProjectReference Include="..\..\src\Lykke.Messaging.RabbitMq\Lykke.Messaging.RabbitMq.csproj" />
-    <ProjectReference Include="..\..\src\Lykke.Messaging\Lykke.Messaging.csproj" />
   </ItemGroup>
 
 </Project>
