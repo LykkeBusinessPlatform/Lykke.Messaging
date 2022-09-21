@@ -1,4 +1,4 @@
-name: Publish to nuget
+name: Publish Lykke.Messaging
 on:
   push:
     tags: 
