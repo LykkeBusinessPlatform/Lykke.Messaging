@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using Lykke.Common.Log;
 using Lykke.Logs;
-using Lykke.Logs.Loggers.LykkeConsole;
 using Lykke.Messaging.Serialization;
 using Moq;
 using NUnit.Framework;
@@ -16,7 +15,7 @@ namespace Lykke.Messaging.Tests
 
         public SerializationManagerTests()
         {
-            _logFactory = LogFactory.Create().AddUnbufferedConsole();
+            _logFactory = LogFactory.Create();
         }
 
         [Test]

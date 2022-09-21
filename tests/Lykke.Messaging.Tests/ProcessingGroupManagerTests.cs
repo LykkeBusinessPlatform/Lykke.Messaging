@@ -7,7 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Lykke.Common.Log;
 using Lykke.Logs;
-using Lykke.Logs.Loggers.LykkeConsole;
 using Lykke.Messaging.Contract;
 using Lykke.Messaging.Serialization;
 using Lykke.Messaging.Transports;
@@ -24,12 +23,18 @@ namespace Lykke.Messaging.Tests
 
         public ProcessingGroupManagerTests()
         {
-            _logFactory = LogFactory.Create().AddUnbufferedConsole();
+            _logFactory = LogFactory.Create();
         }
 
         public void Dispose()
         {
             _logFactory?.Dispose();
+        }
+
+        [SetUp]
+        public void SetUp()
+        {
+            Environment.SetEnvironmentVariable("ENV_INFO", "NUNIT");
         }
 
         [Test]

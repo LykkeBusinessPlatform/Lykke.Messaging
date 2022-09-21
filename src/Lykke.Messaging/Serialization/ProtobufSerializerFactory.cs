@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Linq;
 using Common.Log;
 using Lykke.Common.Log;
-using ProtoBuf;
 
 namespace Lykke.Messaging.Serialization
 {

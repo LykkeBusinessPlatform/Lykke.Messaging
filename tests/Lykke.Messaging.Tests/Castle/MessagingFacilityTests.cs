@@ -10,7 +10,6 @@ using Lykke.Messaging.Configuration;
 using Lykke.Messaging.Contract;
 using Lykke.Messaging.InMemory;
 using Lykke.Messaging.Serialization;
-using Moq;
 using NUnit.Framework;
 
 namespace Lykke.Messaging.Tests.Castle

@@ -5,7 +5,6 @@ using System.Reflection;
 using System.Threading;
 using Lykke.Common.Log;
 using Lykke.Logs;
-using Lykke.Logs.Loggers.LykkeConsole;
 using Lykke.Messaging.Contract;
 using Lykke.Messaging.Serialization;
 using Lykke.Messaging.Transports;
@@ -23,7 +22,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
 
         public TransportTests()
         {
-            _logFactory = LogFactory.Create().AddUnbufferedConsole();
+            _logFactory = LogFactory.Create();
         }
 
         public void Dispose()

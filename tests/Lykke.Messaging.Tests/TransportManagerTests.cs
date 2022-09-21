@@ -3,7 +3,6 @@ using System.Linq;
 using System.Threading;
 using Lykke.Common.Log;
 using Lykke.Logs;
-using Lykke.Logs.Loggers.LykkeConsole;
 using Lykke.Messaging.Contract;
 using Lykke.Messaging.InMemory;
 using Lykke.Messaging.Transports;
@@ -22,7 +21,7 @@ namespace Lykke.Messaging.Tests
 
         public TransportManagerTests()
         {
-            _logFactory = LogFactory.Create().AddUnbufferedConsole();
+            _logFactory = LogFactory.Create();
         }
 
         public void Dispose()
