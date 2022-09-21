@@ -3,8 +3,8 @@ on:
   push:
     tags: 
       - '*'
-    paths:
-      - src/Lykke.Messaging/**
+    tags-ignore:
+      - 'rmq-*'
 jobs:
   build:
     runs-on: ubuntu-latest
