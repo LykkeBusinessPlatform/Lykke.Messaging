@@ -9,13 +9,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		VersionInfo.cs = VersionInfo.cs
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{9729687F-6883-47F2-87F3-78571CAEC925}"
-	ProjectSection(SolutionItems) = preProject
-		.nuget\NuGet.Config = .nuget\NuGet.Config
-		.nuget\NuGet.exe = .nuget\NuGet.exe
-		.nuget\NuGet.targets = .nuget\NuGet.targets
-	EndProjectSection
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lykke.Messaging", "src\Lykke.Messaging\Lykke.Messaging.csproj", "{0B0AD1E2-95FE-407E-9CEB-85337C653824}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lykke.Messaging.Castle", "src\Lykke.Messaging.Castle\Lykke.Messaging.Castle.csproj", "{6BD35707-DEFA-4606-98F6-D203CB7A3D2A}"
