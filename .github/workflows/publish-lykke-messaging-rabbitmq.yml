@@ -2,7 +2,7 @@ name: Publish Lykke.Messaging.RabbitMq
 on:
   push:
     tags: 
-      - 'rmq-*'
+      - 'rmq-**'
 jobs:
   build:
     runs-on: ubuntu-latest
