@@ -4,7 +4,7 @@ on:
     tags: 
       - '*'
     tags-ignore:
-      - 'rmq-*'
+      - 'rmq*'
 jobs:
   build:
     runs-on: ubuntu-latest
