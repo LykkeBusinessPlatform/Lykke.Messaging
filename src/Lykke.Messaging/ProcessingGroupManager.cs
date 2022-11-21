@@ -144,18 +144,16 @@ namespace Lykke.Messaging
                 }
                 catch (InvalidSubscriptionException e)
                 {
-                    _log.WriteErrorAsync(
-                        nameof(ProcessingGroupManager),
-                        nameof(Subscribe),
+                    _log.WriteError(
+                        $"{nameof(ProcessingGroupManager)}.{nameof(Subscribe)}",
                         $"Failed to subscribe for endpoint {endpoint} within processing group '{processingGroupName}'",
                         e);
                     throw;
                 }
                 catch (Exception e)
                 {
-                    _log.WriteErrorAsync(
-                        nameof(ProcessingGroupManager),
-                        nameof(Subscribe),
+                    _log.WriteError(
+                        $"{nameof(ProcessingGroupManager)}.{nameof(Subscribe)}",
                         $"Failed to subscribe for endpoint {endpoint} within processing group '{processingGroupName}'. Attempt# {attemptNumber}. Will retry in {ResubscriptionTimeout}ms",
                         e);
                     ScheduleSubscription(doSubscribe, attemptNumber + 1);
@@ -222,9 +220,8 @@ namespace Lykke.Messaging
                 }
                 catch (Exception e)
                 {
-                    _log.WriteErrorAsync(
-                        nameof(ProcessingGroupManager),
-                        nameof(ProcessDeferredAcknowledgements),
+                    _log.WriteError(
+                        $"{nameof(ProcessingGroupManager)}.{nameof(ProcessDeferredAcknowledgements)}",
                         "Deferred acknowledge failed. Will retry later.",
                         e);
                 }
