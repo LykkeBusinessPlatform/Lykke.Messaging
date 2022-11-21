@@ -141,17 +141,19 @@ namespace Lykke.Messaging.RabbitMq
                 {
                     var connection = m_Factories[i].CreateConnection($"{_appName} {_appVersion} {destination}");
                     if (logConnection)
+                    {
                         _log.WriteInfo(
-                            nameof(RabbitMqTransport),
-                            nameof(CreateConnection),
+                            $"{nameof(RabbitMqTransport)}.{nameof(CreateConnection)}",
+                            null,
                             $"Created rmq connection to {m_Factories[i].Endpoint.HostName} {destination}.");
+                    }
+
                     return connection;
                 }
                 catch (Exception e)
                 {
-                    _log.WriteErrorAsync(
-                        nameof(RabbitMqTransport),
-                        nameof(CreateConnection),
+                    _log.WriteError(
+                        $"{nameof(RabbitMqTransport)}.{nameof(CreateConnection)}",
                         $"Failed to create rmq connection to {m_Factories[i].Endpoint.HostName}{((i + 1 != m_Factories.Length) ? " (will try other known hosts)" : "")} {destination}: ",
                         e);
                     exception = e;
@@ -190,9 +192,8 @@ namespace Lykke.Messaging.RabbitMq
                         lock (m_Sessions)
                         {
                             m_Sessions.Remove(rabbitMqSession);
-                            _log.WriteErrorAsync(
-                                nameof(RabbitMqTransport),
-                                nameof(CreateSession),
+                            _log.WriteError(
+                                $"{nameof(RabbitMqTransport)}.{nameof(CreateSession)}",
                                 $"Failed to send message to destination '{dst}' broker '{connection.Endpoint.HostName}'. Treating session as broken. ",
                                 exception);
                         }
@@ -206,9 +207,8 @@ namespace Lykke.Messaging.RabbitMq
                         lock (m_Sessions)
                         {
                             m_Sessions.Remove(rabbitMqSession);
-                            _log.WriteErrorAsync(
-                                nameof(RabbitMqTransport),
-                                nameof(CreateSession),
+                            _log.WriteError(
+                                $"{nameof(RabbitMqTransport)}.{nameof(CreateSession)}",
                                 $"Failed to send message to destination '{dst}' broker '{connection.Endpoint.HostName}'. Treating session as broken. ",
                                 exception);
                         }
