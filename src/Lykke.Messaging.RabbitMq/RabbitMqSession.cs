@@ -189,9 +189,9 @@ namespace Lykke.Messaging.RabbitMq
             return Subscribe(destination, (properties, bytes, acknowledge) => callback(ToBinaryMessage(properties, bytes), acknowledge), messageType);
         }
 
-        private BinaryMessage ToBinaryMessage(IBasicProperties properties, byte[] bytes)
+        private BinaryMessage ToBinaryMessage(IBasicProperties properties, ReadOnlyMemory<byte> bytes)
         {
-            var binaryMessage = new BinaryMessage {Bytes = bytes, Type = properties.Type};
+            var binaryMessage = new BinaryMessage {Bytes = bytes.ToArray(), Type = properties.Type};
             if (properties.Headers != null)
             {
                 foreach (var header in properties.Headers)
@@ -203,7 +203,7 @@ namespace Lykke.Messaging.RabbitMq
             return binaryMessage;
         }
 
-        private IDisposable Subscribe(string destination, Action<IBasicProperties, byte[], Action<bool>> callback, string messageType)
+        private IDisposable Subscribe(string destination, Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> callback, string messageType)
         {
             lock (m_Consumers)
             {
@@ -231,7 +231,7 @@ namespace Lykke.Messaging.RabbitMq
 
         private IDisposable SubscribeShared(
             string destination,
-            Action<IBasicProperties, byte[], Action<bool>> callback,
+            Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> callback,
             string messageType,
             SharedConsumer consumer)
         {
@@ -257,7 +257,7 @@ namespace Lykke.Messaging.RabbitMq
                 });
         }
 
-        private IDisposable SubscribeNonShared(string destination, Action<IBasicProperties, byte[], Action<bool>> callback)
+        private IDisposable SubscribeNonShared(string destination, Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> callback)
         {
             var consumer = _logFactory == null 
                 ? new Consumer(_log, m_Model, callback)
