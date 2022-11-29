@@ -5,11 +5,10 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Lykke.Common.Log;
-using Lykke.Logs;
 using Lykke.Messaging.Contract;
 using Lykke.Messaging.Serialization;
 using Lykke.Messaging.Transports;
+using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
 using Assert = NUnit.Framework.Assert;
@@ -19,16 +18,16 @@ namespace Lykke.Messaging.Tests
     [TestFixture]
     public class ProcessingGroupManagerTests : IDisposable
     {
-        private readonly ILogFactory _logFactory;
+        private readonly ILoggerFactory _loggerFactory;
 
         public ProcessingGroupManagerTests()
         {
-            _logFactory = LogFactory.Create();
+            _loggerFactory = new Mock<ILoggerFactory>().Object;
         }
 
         public void Dispose()
         {
-            _logFactory?.Dispose();
+            _loggerFactory?.Dispose();
         }
 
         [SetUp]
@@ -57,12 +56,12 @@ namespace Lykke.Messaging.Tests
         public void SameThreadSubscriptionTest()
         {
             var transportManager = new TransportManager(
-                _logFactory,
+                _loggerFactory,
                 new TransportResolver(new Dictionary<string, TransportInfo>
                     {
                         {"transport-1", new TransportInfo("transport-1", "login1", "pwd1", "None", "InMemory")}
                     }));
-            var processingGroupManager = new ProcessingGroupManager(_logFactory, transportManager);
+            var processingGroupManager = new ProcessingGroupManager(_loggerFactory, transportManager);
             var endpoint = new Endpoint {Destination = "queue", TransportId = "transport-1"};
             var session = transportManager.GetMessagingSession(endpoint, "pg");
             var usedThreads = new List<int>();
@@ -88,12 +87,12 @@ namespace Lykke.Messaging.Tests
         public void MultiThreadThreadSubscriptionTest()
         {
             var transportManager = new TransportManager(
-                _logFactory,
+                _loggerFactory,
                 new TransportResolver(new Dictionary<string, TransportInfo>
                     {
                         {"transport-1", new TransportInfo("transport-1", "login1", "pwd1", "None", "InMemory")}
                     }));
-            var processingGroupManager = new ProcessingGroupManager(_logFactory, transportManager, new Dictionary<string, ProcessingGroupInfo>()
+            var processingGroupManager = new ProcessingGroupManager(_loggerFactory, transportManager, new Dictionary<string, ProcessingGroupInfo>()
             {
                 {
                     "pg", new ProcessingGroupInfo() {ConcurrencyLevel = 3}
@@ -134,12 +133,12 @@ namespace Lykke.Messaging.Tests
         public void QueuedTaskSchedulerIsHiddenTest()
         {
             var transportManager = new TransportManager(
-                _logFactory,
+                _loggerFactory,
                 new TransportResolver(new Dictionary<string, TransportInfo>
                     {
                         {"transport-1", new TransportInfo("transport-1", "login1", "pwd1", "None", "InMemory")}
                     }));
-            var processingGroupManager = new ProcessingGroupManager(_logFactory, transportManager, new Dictionary<string, ProcessingGroupInfo>()
+            var processingGroupManager = new ProcessingGroupManager(_loggerFactory, transportManager, new Dictionary<string, ProcessingGroupInfo>()
             {
                 {
                     "pg", new ProcessingGroupInfo() {ConcurrencyLevel = 1,QueueCapacity = 1000}
@@ -174,13 +173,13 @@ namespace Lykke.Messaging.Tests
         public void MultiThreadPrioritizedThreadSubscriptionTest()
         {
             var transportManager = new TransportManager(
-                _logFactory,
+                _loggerFactory,
                 new TransportResolver(new Dictionary<string, TransportInfo>
                     {
                         {"transport-1", new TransportInfo("transport-1", "login1", "pwd1", "None", "InMemory")}
                     }));
             var processingGroupManager = new ProcessingGroupManager(
-                _logFactory,
+                _loggerFactory,
                 transportManager,
                 new Dictionary<string, ProcessingGroupInfo>()
                 {
@@ -459,7 +458,7 @@ namespace Lykke.Messaging.Tests
                 .Callback<Endpoint, string, Action>((endpoint, name, invocation) => setOnFail(invocation))
                 .Returns(session.Object);
             return new ProcessingGroupManager(
-                _logFactory,
+                _loggerFactory,
                 transportManager.Object,
                 new Dictionary<string, ProcessingGroupInfo>
                 {

@@ -1,15 +1,14 @@
 ﻿using System;
-using Common.Log;
-using Lykke.Common.Log;
 using Lykke.Messaging.Contract;
 using Lykke.Messaging.Transports;
+using Microsoft.Extensions.Logging;
 
 namespace Lykke.Messaging
 {
     internal class MessagingSessionWrapper:IMessagingSession
     {
-        private readonly ILog _log;
 
+        private readonly ILogger<MessagingSessionWrapper> _logger;
         private IMessagingSession _messagingSession;
 
         public string TransportId { get; private set; }
@@ -17,24 +16,15 @@ namespace Lykke.Messaging
 
         public event Action OnFailure;
 
-        [Obsolete]
-        public MessagingSessionWrapper(ILog log, string transportId, string name)
+        public MessagingSessionWrapper(ILoggerFactory loggerFactory, string transportId, string name)
         {
-            _log = log;
-
-            TransportId = transportId;
-            Name = name;
-        }
-
-        public MessagingSessionWrapper(ILogFactory logFactory, string transportId, string name)
-        {
-            if (logFactory == null)
+            if (loggerFactory == null)
             {
-                throw new ArgumentNullException(nameof(logFactory));
+                throw new ArgumentNullException(nameof(loggerFactory));
             }
 
-            _log = logFactory.CreateLog(this);
-
+            _logger = loggerFactory.CreateLogger<MessagingSessionWrapper>();
+            
             TransportId = transportId;
             Name = name;
         }
@@ -57,7 +47,7 @@ namespace Lykke.Messaging
                 }
                 catch (Exception e)
                 {
-                    _log.WriteError(nameof(MessagingSessionWrapper), nameof(ReportFailure), e);
+                    _logger.LogError(e, "{Method}: error", nameof(ReportFailure));
                 }
             }
         }

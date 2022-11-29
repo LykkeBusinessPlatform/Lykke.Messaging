@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using Common.Log;
 using Lykke.Messaging.Contract;
 using Lykke.Messaging.InMemory;
 using Lykke.Messaging.Serialization;
+using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
 
@@ -44,7 +44,8 @@ namespace Lykke.Messaging.Tests
         public void TransportFailureHandlingTest()
         {
             var resolver = MockTransportResolver();
-            using (var engine = new MessagingEngine(new LogToConsole(), resolver, new InMemoryTransportFactory()))
+            var loggerFactory = new Mock<ILoggerFactory>();
+            using (var engine = new MessagingEngine(loggerFactory.Object, resolver, new InMemoryTransportFactory()))
             {
                 engine.SerializationManager.RegisterSerializer(SerializationFormat.Json, typeof(string), new FakeStringSerializer());
                 int failureWasReportedCount = 0;
@@ -69,7 +70,8 @@ namespace Lykke.Messaging.Tests
         public void ByDefaultEachDestinationIsSubscribedOnDedicatedThreadTest()
         {
             ITransportResolver resolver = MockTransportResolver();
-            using (var engine = new MessagingEngine(new LogToConsole(), resolver, new InMemoryTransportFactory()))
+            var loggerFactory = new Mock<ILoggerFactory>();
+            using (var engine = new MessagingEngine(loggerFactory.Object, resolver, new InMemoryTransportFactory()))
             {
                 engine.SerializationManager.RegisterSerializer(SerializationFormat.Json, typeof(string), new FakeStringSerializer());
 
