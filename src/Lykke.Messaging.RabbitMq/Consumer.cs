@@ -1,39 +1,27 @@
 ﻿using System;
 using RabbitMQ.Client;
-using Common.Log;
-using Lykke.Common.Log;
+using Microsoft.Extensions.Logging;
 
 namespace Lykke.Messaging.RabbitMq
 {
     internal class Consumer : DefaultBasicConsumer, IDisposable
     {
-        private readonly ILog _log;
         private readonly Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> m_Callback;
-
-        [Obsolete]
-        public Consumer(
-            ILog log,
-            IModel model,
-            Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> callback)
-            : base(model)
-        {
-            _log = log;
-            m_Callback = callback ?? throw new ArgumentNullException("callback");
-        }
+        private readonly ILogger<Consumer> _logger;
 
         public Consumer(
-            ILogFactory logFactory,
+            ILoggerFactory loggerFactory,
             IModel model,
             Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> callback)
             
             : base(model)
         {
-            if (logFactory == null)
+            if (loggerFactory == null)
             {
-                throw new ArgumentNullException(nameof(logFactory));
+                throw new ArgumentNullException(nameof(loggerFactory));
             }
 
-            _log = logFactory.CreateLog(this);
+            _logger = loggerFactory.CreateLogger<Consumer>();
             m_Callback = callback ?? throw new ArgumentNullException(nameof(callback));
         }
 
@@ -58,7 +46,7 @@ namespace Lykke.Messaging.RabbitMq
             }
             catch (Exception e)
             {
-                _log.WriteError(nameof(Consumer), nameof(HandleBasicDeliver), e);
+                _logger.LogError(e, "{Method}: error", nameof(HandleBasicDeliver));
             }
         }
 
@@ -77,7 +65,7 @@ namespace Lykke.Messaging.RabbitMq
                     }
                     catch (Exception e)
                     {
-                        _log.WriteError(nameof(Consumer), nameof(Dispose), e);
+                        _logger.LogError(e, "{Method}: error", nameof(Dispose));
                     }
                 }
             }

@@ -3,11 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
-using Lykke.Common.Log;
-using Lykke.Logs;
 using Lykke.Messaging.Contract;
 using Lykke.Messaging.Serialization;
 using Lykke.Messaging.Transports;
+using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
@@ -16,20 +15,8 @@ using ThreadState = System.Threading.ThreadState;
 namespace Lykke.Messaging.RabbitMq.Tests
 {
     [TestFixture(Ignore = "Tests are broken")]
-    public class TransportTests : IDisposable
+    public class TransportTests
     {
-        private readonly ILogFactory _logFactory;
-
-        public TransportTests()
-        {
-            _logFactory = LogFactory.Create();
-        }
-
-        public void Dispose()
-        {
-            _logFactory?.Dispose();
-        }
-        
         [SetUp]
         public void Setup()
         {
@@ -101,7 +88,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
         [Test]
         public void SendTest()
         {
-            using (var transport = new RabbitMqTransport(_logFactory, HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
                 var delivered=new ManualResetEvent(false);
                 IMessagingSession messagingSession = transport.CreateSession( null);
@@ -120,7 +107,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
         [Ignore("integration")]
         public void SendFailureTest()
         {
-            using (var transport = new RabbitMqTransport(_logFactory, HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
                 var delivered = new ManualResetEvent(false);
                 IMessagingSession messagingSession = transport.CreateSession( ()=>Console.WriteLine("onFailure called"));
@@ -148,7 +135,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
         [Test]
         public void AckTest()
         {
-            using (var transport = new RabbitMqTransport(_logFactory, HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
                 var delivered=new ManualResetEvent(false);
                 IMessagingSession messagingSession = transport.CreateSession( null);
@@ -162,7 +149,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
                 Assert.That(delivered.WaitOne(1000),Is.True,"Message was not delivered");
             }
 
-            using (var transport = new RabbitMqTransport(_logFactory, HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
                 var delivered = new ManualResetEvent(false);
                 IMessagingSession messagingSession = transport.CreateSession(null);
@@ -173,7 +160,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
         [Test]
         public void NackTest()
         {
-            using (var transport = new RabbitMqTransport(_logFactory, HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
                 var delivered=new ManualResetEvent(false);
                 IMessagingSession messagingSession = transport.CreateSession( null);
@@ -187,7 +174,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
                 Assert.That(delivered.WaitOne(300),Is.True,"Message was not delivered");
             }
 
-            using (var transport = new RabbitMqTransport(_logFactory, HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
                 var delivered = new ManualResetEvent(false);
                 IMessagingSession messagingSession = transport.CreateSession(null);
@@ -200,7 +187,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
         [Test]
         public void RpcTest()
         {
-            using (var transport = new RabbitMqTransport(_logFactory, HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
                 var request = new byte[] {0x0, 0x1, 0x2};
                 var response = new byte[] {0x2, 0x1, 0x0};
@@ -224,7 +211,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
         [TestCase("test", TestName = "Shared destination")]
         public void UnsubscribeTest(string messageType)
         {
-            using (var transport = new RabbitMqTransport(_logFactory, HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
                 var ev = new AutoResetEvent(false);
                 IMessagingSession messagingSession = transport.CreateSession( null);
@@ -239,7 +226,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
         [Test]
         public void ConnectionFailureTest()
         {
-            using (var transport = new RabbitMqTransport(_logFactory, HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
                 var onFailureCalled = new AutoResetEvent(false);
                 IMessagingSession messagingSession = transport.CreateSession( () =>
@@ -260,7 +247,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
         [Test]
         public void SessionIsTreatedAsBrokenAfterSendFailureWithAlreadyClosedExceptionTest()
         {
-            using (var transport = new RabbitMqTransport(_logFactory, HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
                 var onFailureCalled = new AutoResetEvent(false);
                 IMessagingSession messagingSession = transport.CreateSession( () =>
@@ -293,7 +280,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
         [Test]
         public void HandlerWaitStopsAndMessageOfUnknownTypeReturnsToQueueOnUnsubscribeTest()
         {
-            using (var transport = new RabbitMqTransport(_logFactory, HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
                 IMessagingSession messagingSession = transport.CreateSession( null);
                 var received = new AutoResetEvent(false);
@@ -313,7 +300,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
         [Test]
         public void MessageOfUnknownTypeShouldPauseProcessingTillCorrespondingHandlerIsRegisteredTest()
         {
-            using (var transport = new RabbitMqTransport(_logFactory, HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
                 IMessagingSession messagingSession = transport.CreateSession( null);
                 var type1Received = new AutoResetEvent(false);
@@ -351,7 +338,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
         {
             var received = new ManualResetEvent(false);
             Thread connectionThread = null;
-            using (var transport = new RabbitMqTransport(_logFactory, HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
                 IMessagingSession messagingSession = transport.CreateSession( null);
                 messagingSession.Subscribe(TEST_QUEUE, (message, acknowledge) =>
@@ -380,7 +367,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
             var messageBytes = new byte[messageSize];
             new Random().NextBytes(messageBytes);
 
-            using (var transport = new RabbitMqTransport(_logFactory, HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
                 IMessagingSession messagingSession = transport.CreateSession(null, confirmedSending);
                 Stopwatch sw = Stopwatch.StartNew();
@@ -405,9 +392,9 @@ namespace Lykke.Messaging.RabbitMq.Tests
         {
 
             var messagingEngine = new MessagingEngine(
-                _logFactory,
+                NullLoggerFactory.Instance,
                 new TransportResolver(new Dictionary<string, TransportInfo> {{"test", new TransportInfo(HOST, "guest", "guest", null, "RabbitMq")}}),
-                new RabbitMqTransportFactory(_logFactory));
+                new RabbitMqTransportFactory(NullLoggerFactory.Instance));
 
             using (messagingEngine)
             {
@@ -431,7 +418,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
         [Test]
         public void EndpointVerificationTest()
         {
-            using (var transport = new RabbitMqTransport(_logFactory, HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
                 var res = transport.VerifyDestination("unistream.processing.events", EndpointUsage.Publish | EndpointUsage.Subscribe, false, out var error);
                 Console.WriteLine(error);
@@ -448,7 +435,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
                 Publish = new PublicationAddress("direct", "", m_TempQueue).ToString()
             };
 
-            using (var transport = new RabbitMqTransport(_logFactory, HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
                 var res = transport.VerifyDestination(defaultExchangeDestination, EndpointUsage.Publish | EndpointUsage.Subscribe, true, out var error);
                 Console.WriteLine(error);
@@ -459,7 +446,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
         [Test]
         public void AttemptToSubscribeSameDestinationAndMessageTypeTwiceFailureTest()
         {
-            using (var transport = new RabbitMqTransport(_logFactory, HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
                 IMessagingSession messagingSession = transport.CreateSession( null);
                 messagingSession.Subscribe(TEST_QUEUE, (message, acknowledge) => { }, "type1");
@@ -470,7 +457,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
         [Test]
         public void AttemptToSubscribeSharedDestinationWithoutMessageTypeFailureTest()
         {
-            using (var transport = new RabbitMqTransport(_logFactory, HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
                 IMessagingSession messagingSession = transport.CreateSession( null);
                 messagingSession.Subscribe(TEST_QUEUE, (message, acknowledge) => { }, "type1");
@@ -482,7 +469,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
         [Test]
         public void AttemptToSubscribeNonSharedDestinationWithMessageTypeFailureTest()
         {
-            using (var transport = new RabbitMqTransport(_logFactory, HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
                 IMessagingSession messagingSession = transport.CreateSession( null);
 
@@ -497,7 +484,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
         [Test]
         public void AttemptToSubscribeSameDestinationWithoutMessageTypeTwiceFailureTest()
         {
-            using (var transport = new RabbitMqTransport(_logFactory, HOST, "guest", "guest"))
+            using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
                 IMessagingSession messagingSession = transport.CreateSession( null);
 
@@ -514,7 +501,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
         [Test]
         public string VerifyPublishEndpointFailureTest()
         {
-            var transport = new RabbitMqTransport(_logFactory, HOST, "guest", "guest");
+            var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest");
             var valid = transport.VerifyDestination("non.existing", EndpointUsage.Publish, false, out var error);
             Assert.That(valid,Is.False, "endpoint reported as valid");
             Assert.That(error, Is.EqualTo(@"The AMQP operation was interrupted: AMQP close-reason, initiated by Peer, code=404, text=""NOT_FOUND - no exchange 'non.existing' in vhost '/'"", classId=40, methodId=10, cause="));
@@ -524,7 +511,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
         [Test]
         public string VerifySubscriptionEndpointNoExchangeFailureTest()
         {
-            var transport = new RabbitMqTransport(_logFactory, HOST, "guest", "guest");
+            var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest");
             var valid = transport.VerifyDestination(new Destination { Subscribe = "non.existing", Publish = "non.existing" }, EndpointUsage.Subscribe, false, out var error);
             Assert.That(valid,Is.False, "endpoint reported as valid");
             Assert.That(error, Is.EqualTo(@"The AMQP operation was interrupted: AMQP close-reason, initiated by Peer, code=404, text=""NOT_FOUND - no exchange 'non.existing' in vhost '/'"", classId=40, methodId=10, cause="));
@@ -535,7 +522,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
         [Test]
         public string VerifySubscriptionEndpointNoQueueFailureTest()
         {
-            var transport = new RabbitMqTransport(_logFactory, HOST, "guest", "guest");
+            var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest");
             var valid = transport.VerifyDestination(new Destination { Subscribe = "non.existing", Publish = "amq.direct" }, EndpointUsage.Subscribe, false, out var error);
             Assert.That(valid,Is.False, "endpoint reported as valid");
             Assert.That(error, Is.EqualTo(@"The AMQP operation was interrupted: AMQP close-reason, initiated by Peer, code=404, text=""NOT_FOUND - no queue 'non.existing' in vhost '/'"", classId=50, methodId=10, cause="));
@@ -556,7 +543,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
             var sendEndpoint = new Endpoint("sendTransport", TEST_EXCHANGE, TEST_QUEUE, true, SerializationFormat.Json);
 
 
-            using (var me = new MessagingEngine(_logFactory, transportResolver, new RabbitMqTransportFactory(_logFactory, false)))
+            using (var me = new MessagingEngine(NullLoggerFactory.Instance, transportResolver, new RabbitMqTransportFactory(NullLoggerFactory.Instance, false)))
             {
                 me.Send(1, sendEndpoint);
                 me.ResubscriptionTimeout = 100;

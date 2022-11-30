@@ -2,10 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using Common.Log;
-using Lykke.Common.Log;
 using Lykke.Messaging.Contract;
 using Lykke.Messaging.Transports;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.PlatformAbstractions;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
@@ -16,39 +15,28 @@ namespace Lykke.Messaging.RabbitMq
     {
         private static readonly Random m_Random = new Random((int)DateTime.UtcNow.Ticks & 0x0000FFFF);
 
-        private readonly ILogFactory _logFactory;
-        private readonly ILog _log;
         private readonly TimeSpan? m_NetworkRecoveryInterval;
         private readonly ConnectionFactory[] m_Factories;
         private readonly List<RabbitMqSession> m_Sessions = new List<RabbitMqSession>();
         private readonly ManualResetEvent m_IsDisposed = new ManualResetEvent(false);
         private readonly string _appName = PlatformServices.Default.Application.ApplicationName;
         private readonly string _appVersion = PlatformServices.Default.Application.ApplicationVersion;
-        
+        private readonly ILoggerFactory _loggerFactory;
+        private readonly ILogger<RabbitMqTransport> _logger;
+
         internal long SessionsCount => m_Sessions.Count;
 
-        [Obsolete]
         public RabbitMqTransport(
-            ILog log,
+            ILoggerFactory loggerFactory,
             string broker,
             string username,
             string password)
-            : this(log, new[] {broker}, username, password)
+            : this(loggerFactory, new[] { broker }, username, password)
         {
         }
 
         public RabbitMqTransport(
-            ILogFactory logFactory,
-            string broker,
-            string username,
-            string password)
-            : this(logFactory, new[] { broker }, username, password)
-        {
-        }
-
-        [Obsolete]
-        public RabbitMqTransport(
-            ILog log,
+            ILoggerFactory loggerFactory,
             string[] brokers,
             string username,
             string password,
@@ -60,49 +48,8 @@ namespace Lykke.Messaging.RabbitMq
             if (brokers.Length == 0)
                 throw new ArgumentException("brokers list is empty", nameof(brokers));
 
-            _log = log;
-            m_NetworkRecoveryInterval = networkRecoveryInterval;
-
-            var factories = brokers.Select(brokerName =>
-            {
-                var f = new ConnectionFactory
-                {
-                    UserName = username,
-                    Password = password,
-                    AutomaticRecoveryEnabled = m_NetworkRecoveryInterval.HasValue
-                };
-
-                if (m_NetworkRecoveryInterval.HasValue)
-                    f.NetworkRecoveryInterval = m_NetworkRecoveryInterval.Value; //it's default value
-
-                if (Uri.TryCreate(brokerName, UriKind.Absolute, out var uri))
-                    f.Uri = uri;
-                else
-                    f.HostName = brokerName;
-
-                return f;
-            });
-
-            m_Factories = shuffleBrokersOnSessionCreate && brokers.Length > 1
-                ? factories.OrderBy(x => m_Random.Next()).ToArray()
-                : factories.ToArray();
-        }
-
-        public RabbitMqTransport(
-            ILogFactory logFactory,
-            string[] brokers,
-            string username,
-            string password,
-            bool shuffleBrokersOnSessionCreate = true,
-            TimeSpan? networkRecoveryInterval = null)
-        {
-            if (brokers == null)
-                throw new ArgumentNullException(nameof(brokers));
-            if (brokers.Length == 0)
-                throw new ArgumentException("brokers list is empty", nameof(brokers));
-
-            _logFactory = logFactory ?? throw new ArgumentNullException(nameof(logFactory));
-            _log = logFactory.CreateLog(this);
+            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
+            _logger = loggerFactory.CreateLogger<RabbitMqTransport>();
 
             m_NetworkRecoveryInterval = networkRecoveryInterval;
 
@@ -142,20 +89,24 @@ namespace Lykke.Messaging.RabbitMq
                     var connection = m_Factories[i].CreateConnection($"{_appName} {_appVersion} {destination}");
                     if (logConnection)
                     {
-                        _log.WriteInfo(
-                            $"{nameof(RabbitMqTransport)}.{nameof(CreateConnection)}",
-                            null,
-                            $"Created rmq connection to {m_Factories[i].Endpoint.HostName} {destination}.");
+                        _logger.LogInformation(
+                            "{Method}: Created rmq connection to {HostName} {Destination}.",
+                            nameof(CreateConnection),
+                            m_Factories[i].Endpoint.HostName,
+                            destination);
                     }
 
                     return connection;
                 }
                 catch (Exception e)
                 {
-                    _log.WriteError(
-                        $"{nameof(RabbitMqTransport)}.{nameof(CreateConnection)}",
-                        $"Failed to create rmq connection to {m_Factories[i].Endpoint.HostName}{((i + 1 != m_Factories.Length) ? " (will try other known hosts)" : "")} {destination}: ",
-                        e);
+                    _logger.LogError(e,
+                        i + 1 != m_Factories.Length
+                            ? "{Method}: Failed to create rmq connection to {HostName} (will try other known hosts) {Destination}"
+                            : "{Method}: Failed to create rmq connection to {HostName} {Destination}",
+                        nameof(CreateConnection),
+                        m_Factories[i].Endpoint.HostName,
+                        destination);
                     exception = e;
                 }
             }
@@ -182,9 +133,8 @@ namespace Lykke.Messaging.RabbitMq
                 throw new ObjectDisposedException("Transport is disposed");
 
             var connection = CreateConnection(true, destination);
-            var session = _logFactory == null
-                ? new RabbitMqSession(
-                    _log,
+            var session = new RabbitMqSession(
+                    _loggerFactory,
                     connection,
                     confirmedSending,
                     (rabbitMqSession, dst, exception) =>
@@ -192,25 +142,11 @@ namespace Lykke.Messaging.RabbitMq
                         lock (m_Sessions)
                         {
                             m_Sessions.Remove(rabbitMqSession);
-                            _log.WriteError(
-                                $"{nameof(RabbitMqTransport)}.{nameof(CreateSession)}",
-                                $"Failed to send message to destination '{dst}' broker '{connection.Endpoint.HostName}'. Treating session as broken. ",
-                                exception);
-                        }
-                    })
-                : new RabbitMqSession(
-                    _logFactory,
-                    connection,
-                    confirmedSending,
-                    (rabbitMqSession, dst, exception) =>
-                    {
-                        lock (m_Sessions)
-                        {
-                            m_Sessions.Remove(rabbitMqSession);
-                            _log.WriteError(
-                                $"{nameof(RabbitMqTransport)}.{nameof(CreateSession)}",
-                                $"Failed to send message to destination '{dst}' broker '{connection.Endpoint.HostName}'. Treating session as broken. ",
-                                exception);
+                            _logger.LogError(exception,
+                                "{Method}: Failed to send message to destination '{Destination}' broker '{HostName}'. Treating session as broken.",
+                                nameof(CreateSession),
+                                dst,
+                                connection.Endpoint.HostName);
                         }
                     });
 
@@ -223,10 +159,10 @@ namespace Lykke.Messaging.RabbitMq
 
                     if ((reason.Initiator != ShutdownInitiator.Application || reason.ReplyCode != 200) && onFailure != null)
                     {
-                        _log.WriteWarning(
-                            nameof(RabbitMqTransport),
-                            "ConnectionShutdown",
-                            $"Rmq session to {connection.Endpoint.HostName} is broken. Reason: {reason}");
+                        _logger.LogWarning(
+                            "ConnectionShutdown: Rmq session to {HostName} is broken. Reason: {Reason}",
+                            connection.Endpoint.HostName,
+                            reason);
 
                         // If m_NetworkRecoveryInterval is null this
                         //         means that native Rabbit MQ 
