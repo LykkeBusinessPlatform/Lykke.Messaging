@@ -9,6 +9,7 @@ using Lykke.Messaging.Contract;
 using Lykke.Messaging.Serialization;
 using Lykke.Messaging.Transports;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NUnit.Framework;
 using Assert = NUnit.Framework.Assert;
@@ -22,7 +23,7 @@ namespace Lykke.Messaging.Tests
 
         public ProcessingGroupManagerTests()
         {
-            _loggerFactory = new Mock<ILoggerFactory>().Object;
+            _loggerFactory = NullLoggerFactory.Instance;
         }
 
         public void Dispose()

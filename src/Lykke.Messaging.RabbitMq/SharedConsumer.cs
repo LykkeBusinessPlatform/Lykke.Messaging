@@ -3,33 +3,26 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using RabbitMQ.Client;
-using Common.Log;
-using Lykke.Common.Log;
+using Microsoft.Extensions.Logging;
 
 namespace Lykke.Messaging.RabbitMq
 {
     public class SharedConsumer : DefaultBasicConsumer,IDisposable
     {
-        private readonly ILog _log;
         private readonly Dictionary<string, Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>>> m_Callbacks
             = new Dictionary<string, Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>>>();
         private readonly AutoResetEvent m_CallBackAdded = new AutoResetEvent(false);
         private readonly ManualResetEvent m_Stop = new ManualResetEvent(false);
+        private readonly ILogger<SharedConsumer> _logger;
 
-        [Obsolete]
-        public SharedConsumer(ILog log, IModel model) : base(model)
+        public SharedConsumer(ILoggerFactory loggerFactory, IModel model) : base(model)
         {
-            _log = log;
-        }
-
-        public SharedConsumer(ILogFactory logFactory, IModel model) : base(model)
-        {
-            if (logFactory == null)
+            if (loggerFactory == null)
             {
-                throw new ArgumentNullException(nameof(logFactory));
+                throw new ArgumentNullException(nameof(loggerFactory));
             }
 
-            _log = logFactory.CreateLog(this);
+            _logger = loggerFactory.CreateLogger<SharedConsumer>();
         }
 
         public void AddCallback(Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> callback, string messageType)
@@ -92,7 +85,7 @@ namespace Lykke.Messaging.RabbitMq
                     }
                     catch (Exception e)
                     {
-                        _log.WriteError(nameof(SharedConsumer), nameof(HandleBasicDeliver), e);
+                        _logger.LogError(e, "{Method}: error", nameof(HandleBasicDeliver));
                     }
                     return;
                 }
@@ -129,7 +122,7 @@ namespace Lykke.Messaging.RabbitMq
                     }
                     catch (Exception e)
                     {
-                        _log.WriteError(nameof(SharedConsumer), nameof(Stop), e);
+                        _logger.LogError(e, "{Method}: error", nameof(Stop));
                     }
                 }
             }

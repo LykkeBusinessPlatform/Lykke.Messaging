@@ -5,6 +5,7 @@ using Lykke.Messaging.Contract;
 using Lykke.Messaging.InMemory;
 using Lykke.Messaging.Transports;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NUnit.Framework;
 
@@ -20,7 +21,7 @@ namespace Lykke.Messaging.Tests
 
         public TransportManagerTests()
         {
-            _loggerFactory = new Mock<ILoggerFactory>().Object;
+            _loggerFactory = NullLoggerFactory.Instance;
         }
 
         public void Dispose()

@@ -10,6 +10,8 @@ using Lykke.Messaging.Configuration;
 using Lykke.Messaging.Contract;
 using Lykke.Messaging.InMemory;
 using Lykke.Messaging.Serialization;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
 
 namespace Lykke.Messaging.Tests.Castle
@@ -22,6 +24,7 @@ namespace Lykke.Messaging.Tests.Castle
         private IMessagingConfiguration m_MessagingConfiguration;
         private TransportInfo m_Transport1;
         private TransportInfo m_Transport2;
+        private ILoggerFactory _loggerFactory = NullLoggerFactory.Instance;
 
         [SetUp]
         public void SetUp()

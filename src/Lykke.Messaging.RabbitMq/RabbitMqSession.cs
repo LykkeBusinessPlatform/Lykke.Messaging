@@ -6,16 +6,14 @@ using System.Reactive.Disposables;
 using System.Text;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
-using Common.Log;
-using Lykke.Common.Log;
 using Lykke.Messaging.Contract;
 using Lykke.Messaging.Transports;
+using Microsoft.Extensions.Logging;
 
 namespace Lykke.Messaging.RabbitMq
 {
     internal class RabbitMqSession : IMessagingSession
     {
-        private readonly ILog _log;
         private readonly IConnection m_Connection;
         private readonly IModel m_Model;
         private readonly CompositeDisposable m_Subscriptions = new CompositeDisposable();
@@ -23,52 +21,17 @@ namespace Lykke.Messaging.RabbitMq
         private readonly Action<RabbitMqSession, PublicationAddress, Exception> m_OnSendFail;
 
         private bool m_ConfirmedSending = false;
-        private readonly ILogFactory _logFactory;
+        private readonly ILoggerFactory _loggerFactory;
+        private readonly ILogger<RabbitMqSession> _logger;
 
-        [Obsolete]
         public RabbitMqSession(
-            ILog log,
+            ILoggerFactory loggerFactory,
             IConnection connection,
             bool confirmedSending = false,
             Action<RabbitMqSession, PublicationAddress, Exception> onSendFail = null)
         {
-            _log = log;
-            m_OnSendFail = onSendFail??((s,d,e) => { });
-            m_Connection = connection;
-            m_Model = m_Connection.CreateModel();
-            if(confirmedSending)
-                m_Model.ConfirmSelect();
-            //NOTE: looks like publish confirm is required for guaranteed delivery
-            //smth like:
-            //  m_Model.ConfirmSelect();
-            //and publish like this:
-            //  m_Model.BasicPublish()
-            //  m_Model.WaitForConfirmsOrDie();
-            //it will wait for ack from server and throw exception if message failed to persist ons srever side (e.g. broker reboot)
-            //more info here: http://rianjs.net/2013/12/publisher-confirms-with-rabbitmq-and-c-sharp
-
-            m_Model.BasicQos(0, 300, false);
-            connection.ConnectionShutdown += (connection1, reason) =>
-                {
-                    lock (m_Consumers)
-                    {
-                        foreach (IDisposable consumer in m_Consumers.Values)
-                        {
-                            consumer.Dispose();
-                        }
-                    }
-                };
-        }
-
-        public RabbitMqSession(
-            ILogFactory logFactory,
-            IConnection connection,
-            bool confirmedSending = false,
-            Action<RabbitMqSession, PublicationAddress, Exception> onSendFail = null)
-        {
-
-            _logFactory = logFactory ?? throw new ArgumentNullException(nameof(logFactory));
-            _log = logFactory.CreateLog(this);
+            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
+            _logger = loggerFactory.CreateLogger<RabbitMqSession>();
 
             m_OnSendFail = onSendFail ?? ((s, d, e) => { });
             m_Connection = connection;
@@ -237,9 +200,7 @@ namespace Lykke.Messaging.RabbitMq
         {
             if (consumer == null)
             {
-                consumer = _logFactory == null
-                    ? new SharedConsumer(_log, m_Model)
-                    : new SharedConsumer(_logFactory, m_Model);
+                consumer = new SharedConsumer(_loggerFactory, m_Model);
                 m_Consumers[destination] = consumer;
                 lock (m_Model)
                     m_Model.BasicConsume(destination, false, consumer);
@@ -259,9 +220,7 @@ namespace Lykke.Messaging.RabbitMq
 
         private IDisposable SubscribeNonShared(string destination, Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> callback)
         {
-            var consumer = _logFactory == null 
-                ? new Consumer(_log, m_Model, callback)
-                : new Consumer(_logFactory, m_Model, callback);
+            var consumer = new Consumer(_loggerFactory, m_Model, callback);
 
             lock (m_Model)
                 m_Model.BasicConsume(destination, false, consumer);
@@ -296,7 +255,7 @@ namespace Lykke.Messaging.RabbitMq
                 }
                 catch (Exception e)
                 {
-                    _log.WriteError(nameof(RabbitMqSession), nameof(Dispose), e);
+                    _logger.LogError(e, "{Method}: ", nameof(Dispose));
                 }
             }
 
@@ -307,7 +266,7 @@ namespace Lykke.Messaging.RabbitMq
             }
             catch (Exception e)
             {
-                _log.WriteError(nameof(RabbitMqSession), nameof(Dispose), e);
+                _logger.LogError(e, "{Method}: ", nameof(Dispose));
             }
         }
     }

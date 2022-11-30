@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Lykke.Messaging.Serialization;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NUnit.Framework;
 
@@ -14,7 +15,7 @@ namespace Lykke.Messaging.Tests
 
         public SerializationManagerTests()
         {
-            _loggerFactory = new Mock<ILoggerFactory>().Object;
+            _loggerFactory = NullLoggerFactory.Instance;
         }
 
         [Test]

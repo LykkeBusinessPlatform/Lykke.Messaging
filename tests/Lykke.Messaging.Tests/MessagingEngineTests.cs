@@ -6,6 +6,7 @@ using Lykke.Messaging.Contract;
 using Lykke.Messaging.InMemory;
 using Lykke.Messaging.Serialization;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NUnit.Framework;
 
@@ -17,6 +18,8 @@ namespace Lykke.Messaging.Tests
     [TestFixture]
     public class MessagingEngineTests
     {
+        private ILoggerFactory _loggerFactory = NullLoggerFactory.Instance;
+
         private abstract class TransportConstants
         {
             public const string QUEUE1="queue1";
@@ -44,8 +47,7 @@ namespace Lykke.Messaging.Tests
         public void TransportFailureHandlingTest()
         {
             var resolver = MockTransportResolver();
-            var loggerFactory = new Mock<ILoggerFactory>();
-            using (var engine = new MessagingEngine(loggerFactory.Object, resolver, new InMemoryTransportFactory()))
+            using (var engine = new MessagingEngine(_loggerFactory, resolver, new InMemoryTransportFactory()))
             {
                 engine.SerializationManager.RegisterSerializer(SerializationFormat.Json, typeof(string), new FakeStringSerializer());
                 int failureWasReportedCount = 0;
@@ -70,8 +72,7 @@ namespace Lykke.Messaging.Tests
         public void ByDefaultEachDestinationIsSubscribedOnDedicatedThreadTest()
         {
             ITransportResolver resolver = MockTransportResolver();
-            var loggerFactory = new Mock<ILoggerFactory>();
-            using (var engine = new MessagingEngine(loggerFactory.Object, resolver, new InMemoryTransportFactory()))
+            using (var engine = new MessagingEngine(_loggerFactory, resolver, new InMemoryTransportFactory()))
             {
                 engine.SerializationManager.RegisterSerializer(SerializationFormat.Json, typeof(string), new FakeStringSerializer());
 
