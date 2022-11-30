@@ -1,8 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
-using Lykke.Common.Log;
-using Lykke.Logs;
 using Lykke.Messaging.Serialization;
+using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
 
@@ -11,17 +10,17 @@ namespace Lykke.Messaging.Tests
     [TestFixture]
     public class SerializationManagerTests
     {
-        private readonly ILogFactory _logFactory;
+        private readonly ILoggerFactory _loggerFactory;
 
         public SerializationManagerTests()
         {
-            _logFactory = LogFactory.Create();
+            _loggerFactory = new Mock<ILoggerFactory>().Object;
         }
 
         [Test]
         public void JsonSerializerIsPresentByDefaultTest()
         {
-            var serializationManager = new SerializationManager(_logFactory);
+            var serializationManager = new SerializationManager(_loggerFactory);
 
             Assert.NotNull(serializationManager.ExtractSerializer<int>(SerializationFormat.Json));
         }
@@ -29,7 +28,7 @@ namespace Lykke.Messaging.Tests
         [Test]
         public void MessagePackSerializerIsPresentByDefaultTest()
         {
-            var serializationManager = new SerializationManager(_logFactory);
+            var serializationManager = new SerializationManager(_loggerFactory);
 
             Assert.NotNull(serializationManager.ExtractSerializer<int>(SerializationFormat.MessagePack));
         }
@@ -37,7 +36,7 @@ namespace Lykke.Messaging.Tests
         [Test]
         public void ProtoBufSerializerIsPresentByDefaultTest()
         {
-            var serializationManager = new SerializationManager(_logFactory);
+            var serializationManager = new SerializationManager(_loggerFactory);
 
             Assert.NotNull(serializationManager.ExtractSerializer<int>(SerializationFormat.ProtoBuf));
         }
@@ -45,7 +44,7 @@ namespace Lykke.Messaging.Tests
         [Test]
         public void AnotherJsonSerializerRegistrationFailureTest()
         {
-            var serializationManager = new SerializationManager(_logFactory);
+            var serializationManager = new SerializationManager(_loggerFactory);
             var serializer = new Mock<IMessageSerializer<int>>();
             var factory = new Mock<ISerializerFactory>();
             factory.Setup(f => f.SerializationFormat).Returns(SerializationFormat.Json);
@@ -58,7 +57,7 @@ namespace Lykke.Messaging.Tests
         [Test]
         public void SerialiezerShouldBeCreatedOnlyOnceTest()
         {
-            var serializationManager = new SerializationManager(_logFactory);
+            var serializationManager = new SerializationManager(_loggerFactory);
             var mre = new ManualResetEvent(false);
 
             IMessageSerializer<string> serializer1 = null;

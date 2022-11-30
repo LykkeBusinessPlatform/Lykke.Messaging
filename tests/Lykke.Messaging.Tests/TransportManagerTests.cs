@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Linq;
 using System.Threading;
-using Lykke.Common.Log;
-using Lykke.Logs;
 using Lykke.Messaging.Contract;
 using Lykke.Messaging.InMemory;
 using Lykke.Messaging.Transports;
+using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
 
@@ -17,16 +16,16 @@ namespace Lykke.Messaging.Tests
     [TestFixture]
     public class TransportManagerTests : IDisposable
     {
-        private readonly ILogFactory _logFactory;
+        private readonly ILoggerFactory _loggerFactory;
 
         public TransportManagerTests()
         {
-            _logFactory = LogFactory.Create();
+            _loggerFactory = new Mock<ILoggerFactory>().Object;
         }
 
         public void Dispose()
         {
-            _logFactory?.Dispose();
+            _loggerFactory?.Dispose();
         }
 
         private class TransportConstants
@@ -66,7 +65,7 @@ namespace Lykke.Messaging.Tests
             var factory = new Mock<ITransportFactory>();
             factory.Setup(f => f.Create(It.IsAny<TransportInfo>(), It.IsAny<Action>())).Returns(transport.Object);
             factory.Setup(f => f.Name).Returns("Mock");
-            var transportManager = new TransportManager(_logFactory, resolver, factory.Object);
+            var transportManager = new TransportManager(_loggerFactory, resolver, factory.Object);
             int i = 0;
 
             transportManager.GetMessagingSession(
@@ -85,7 +84,7 @@ namespace Lykke.Messaging.Tests
         public void ConcurrentTransportResolutionTest()
         {
             var resolver = MockTransportResolver();
-            var transportManager = new TransportManager(_logFactory, resolver, new InMemoryTransportFactory());
+            var transportManager = new TransportManager(_loggerFactory, resolver, new InMemoryTransportFactory());
             var start = new ManualResetEvent(false);
             int errorCount = 0;
             int attemptCount = 0;

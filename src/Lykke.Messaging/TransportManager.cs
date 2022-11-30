@@ -4,34 +4,24 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Common.Log;
-using Lykke.Common.Log;
 using Lykke.Messaging.Contract;
 using Lykke.Messaging.InMemory;
 using Lykke.Messaging.Transports;
+using Microsoft.Extensions.Logging;
 
 namespace Lykke.Messaging
 {
     internal class TransportManager : ITransportManager
     {
         private readonly ConcurrentDictionary<TransportInfo, ResolvedTransport> m_Transports = new ConcurrentDictionary<TransportInfo, ResolvedTransport>();
-        private readonly ILog _log;
         private readonly ITransportResolver m_TransportResolver;
         private readonly ManualResetEvent m_IsDisposed = new ManualResetEvent(false);
         private readonly ITransportFactory[] m_TransportFactories;
-        private readonly  ILogFactory _logFactory;
+        private readonly ILoggerFactory _loggerFactory;
 
-        [Obsolete]
-        public TransportManager(ILog log, ITransportResolver transportResolver, params ITransportFactory[] transportFactories)
+        public TransportManager(ILoggerFactory loggerFactory, ITransportResolver transportResolver, params ITransportFactory[] transportFactories)
         {
-            m_TransportFactories = transportFactories.Concat(new[] {new InMemoryTransportFactory()}).ToArray();
-            _log = log;
-            m_TransportResolver = transportResolver ?? throw new ArgumentNullException(nameof(transportResolver));
-        }
-
-        public TransportManager(ILogFactory logFactory, ITransportResolver transportResolver, params ITransportFactory[] transportFactories)
-        {
-            _logFactory = logFactory ?? throw new ArgumentNullException(nameof(logFactory));
+            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
             m_TransportFactories = transportFactories.Concat(new[] { new InMemoryTransportFactory() }).ToArray();
             m_TransportResolver = transportResolver ?? throw new ArgumentNullException(nameof(transportResolver));
         }
@@ -83,9 +73,7 @@ namespace Lykke.Messaging
 
             var transport = m_Transports.GetOrAdd(
                 transportInfo,
-                _logFactory == null
-                    ? new ResolvedTransport(_log, transportInfo, () => ProcessTransportFailure(transportInfo), factory)
-                    : new ResolvedTransport(_logFactory, transportInfo, () => ProcessTransportFailure(transportInfo), factory));
+                new ResolvedTransport(_loggerFactory, transportInfo, () => ProcessTransportFailure(transportInfo), factory));
 
             return transport;
         }
