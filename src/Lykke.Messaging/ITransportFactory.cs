@@ -8,9 +8,6 @@ namespace Lykke.Messaging
     {
         string Name { get; }
 
-        [Obsolete]
-        ITransport Create(ILog log, TransportInfo transportInfo, Action onFailure);
-
         ITransport Create(TransportInfo transportInfo, Action onFailure);
     }
 }
