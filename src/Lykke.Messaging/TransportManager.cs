@@ -139,30 +139,27 @@ namespace Lykke.Messaging
         {
             var result = new ConcurrentDictionary<Endpoint, string>();
 
-            var failedDestinations = new ConcurrentDictionary<Destination, string>();
             ResolvedTransport transport = ResolveTransport(transportId);
-
-            Parallel.ForEach(endpoints, endpoint =>
+            
+            foreach (var endpoint in endpoints)
             {
                 try
                 {
-                    bool rerificationResult = transport.VerifyDestination(
+                    bool verificationResult = transport.VerifyDestination(
                         endpoint.Destination,
                         usage,
                         configureIfRequired,
                         out var dstError);
-                    result.TryAdd(endpoint, rerificationResult ? null : dstError);
+                    
+                    result.TryAdd(endpoint, verificationResult ? null : dstError);
                 }
                 catch (Exception e)
                 {
-                    failedDestinations.TryAdd(endpoint.Destination, e.Message);
+                    throw new TransportException(
+                        $"Destination [{endpoint.Destination}] is not properly configured on transport [{transportId}]",
+                        e);
                 }
-            });
-
-            if (failedDestinations.Count > 0)
-                throw new TransportException(
-                    $"Destinations {string.Join(", ", failedDestinations.Keys)} are not properly configured on transport {transportId}:{Environment.NewLine}"
-                    + $"{string.Join($",{Environment.NewLine}", failedDestinations.Values)}");
+            }
 
             return result;
         }
