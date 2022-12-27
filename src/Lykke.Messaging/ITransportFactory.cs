@@ -1,5 +1,4 @@
 ﻿using System;
-using Common.Log;
 using Lykke.Messaging.Transports;
 
 namespace Lykke.Messaging

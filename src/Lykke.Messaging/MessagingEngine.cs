@@ -5,7 +5,6 @@ using System.Linq;
 using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
 using System.Threading;
-using JetBrains.Annotations;
 using Lykke.Core.Utils;
 using Lykke.Messaging.Contract;
 using Lykke.Messaging.Serialization;
@@ -14,7 +13,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Lykke.Messaging
 {
-    [PublicAPI]
     public class MessagingEngine : IMessagingEngine
     {
         private const int DEFAULT_UNACK_DELAY = 60000;
