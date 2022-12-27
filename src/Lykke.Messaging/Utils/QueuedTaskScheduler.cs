@@ -193,43 +193,29 @@ namespace Lykke.Messaging.Utils
                 // we'll receive an OperationCanceledException.  That OCE should not crash the process.
                 try
                 {
-                    // If a thread abort occurs, we'll try to reset it and continue running.
                     while (true)
                     {
-                        try
+                        // For each task queued to the scheduler, try to execute it.
+                        foreach (var task in _blockingTaskQueue.GetConsumingEnumerable(_disposeCancellation.Token))
                         {
-                            // For each task queued to the scheduler, try to execute it.
-                            foreach (var task in _blockingTaskQueue.GetConsumingEnumerable(_disposeCancellation.Token))
+                            // If the task is not null, that means it was queued to this scheduler directly.
+                            // Run it.
+                            if (task != null)
                             {
-                                // If the task is not null, that means it was queued to this scheduler directly.
-                                // Run it.
-                                if (task != null)
-                                {
-                                    TryExecuteTask(task);
-                                }
-                                // If the task is null, that means it's just a placeholder for a task
-                                // queued to one of the subschedulers.  Find the next task based on
-                                // priority and fairness and run it.
-                                else
-                                {
-                                    // Find the next task based on our ordering rules...
-                                    Task targetTask;
-                                    QueuedTaskSchedulerQueue queueForTargetTask;
-                                    lock (_queueGroups) FindNextTask_NeedsLock(out targetTask, out queueForTargetTask);
-
-                                    // ... and if we found one, run it
-                                    if (targetTask != null) queueForTargetTask.ExecuteTask(targetTask);
-                                }
+                                TryExecuteTask(task);
                             }
-                        }
-                        catch (ThreadAbortException)
-                        {
-                            // If we received a thread abort, and that thread abort was due to shutting down
-                            // or unloading, let it pass through.  Otherwise, reset the abort so we can
-                            // continue processing work items.
-                            if (!Environment.HasShutdownStarted && !AppDomain.CurrentDomain.IsFinalizingForUnload())
+                            // If the task is null, that means it's just a placeholder for a task
+                            // queued to one of the subschedulers.  Find the next task based on
+                            // priority and fairness and run it.
+                            else
                             {
-                                Thread.ResetAbort();
+                                // Find the next task based on our ordering rules...
+                                Task targetTask;
+                                QueuedTaskSchedulerQueue queueForTargetTask;
+                                lock (_queueGroups) FindNextTask_NeedsLock(out targetTask, out queueForTargetTask);
+
+                                // ... and if we found one, run it
+                                if (targetTask != null) queueForTargetTask.ExecuteTask(targetTask);
                             }
                         }
                     }
