@@ -5,7 +5,7 @@
     <Version>1.0.1</Version>
     <PackageId>LykkeBiz.Messaging</PackageId>
     <Authors>Lykke Business</Authors>
-    <Description>Lykke Business common tools and utilities</Description>
+    <Description>Lykke Business tools and utilities</Description>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <Copyright>Copyright 2022 (c) Lykke Business. All rights reserved.</Copyright>
   </PropertyGroup>
@@ -15,11 +15,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.3" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="protobuf-net" Version="2.3.7" />
-    <PackageReference Include="SourceLink.Create.CommandLine" Version="2.8.3" PrivateAssets="All" />
     <PackageReference Include="System.Reactive" Version="3.1.1" />
-    <PackageReference Include="System.Reactive.Core" Version="3.1.1" />
-    <PackageReference Include="System.Reactive.Interfaces" Version="3.1.1" />
-    <PackageReference Include="System.Reactive.PlatformServices" Version="3.1.1" />
   </ItemGroup>
 
 </Project>
