@@ -3,10 +3,27 @@ using Lykke.Messaging.Contract;
 
 namespace Lykke.Messaging.Transports
 {
+    /// <summary>
+    /// Transport layer abstraction
+    /// </summary>
     public interface ITransport : IDisposable
     {
-        IMessagingSession CreateSession(Action onFailure);
+        /// <summary>
+        /// Create a session
+        /// </summary>
+        /// <param name="onFailure">Failure handler</param>
+        /// <param name="name">Session name, optional</param>
+        /// <returns></returns>
+        IMessagingSession CreateSession(Action onFailure, string name = null);
         
+        /// <summary>
+        /// Ensures that destination exists
+        /// </summary>
+        /// <param name="destination"></param>
+        /// <param name="usage"></param>
+        /// <param name="configureIfRequired"></param>
+        /// <param name="error"></param>
+        /// <returns></returns>
         bool VerifyDestination(
             Destination destination,
             EndpointUsage usage,
