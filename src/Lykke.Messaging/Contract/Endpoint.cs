@@ -6,11 +6,17 @@ namespace Lykke.Messaging.Contract
     /// <summary>
 	/// Transport-specific destination address
 	/// </summary>
+	// @atarutin: Taking into account comments on TransportId and SerializationFormat,
+	// there is no distinction between Destination and Endpoint structs, unless
+    // SharedDestination field brings in something valuable. Consider merging types
+    // Endpoint and Destination.
 	public readonly struct Endpoint
 	{
 	    /// <summary>
 	    /// The transport identifier
 	    /// </summary>
+	    // @atarutin TODO: probably, the TransportId should be a part of the
+	    // transport, not of the Endpoint
 		public string TransportId { get; }
 
 	    /// <summary>
