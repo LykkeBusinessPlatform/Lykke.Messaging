@@ -42,7 +42,7 @@ namespace Lykke.Messaging.Contract
 
 		    if (string.IsNullOrWhiteSpace(destination))
 			    throw new ArgumentNullException(nameof(destination), "Destination must be specified");
-		    Destination = destination;
+		    Destination = new Destination(destination);
 
 		    SharedDestination = sharedDestination;
 		    SerializationFormat = serializationFormat;

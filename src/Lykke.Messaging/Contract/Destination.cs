@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics.CodeAnalysis;
 
 namespace Lykke.Messaging.Contract
 {
@@ -34,13 +33,8 @@ namespace Lykke.Messaging.Contract
             Subscribe = subscribe;
         }
 
-        private Destination(string address):this(address, address)
+        public Destination(string address):this(address, address)
         {
-        }
-
-        public static implicit operator Destination([NotNull] string destination)
-        {
-            return new Destination(destination);
         }
 
         private bool Equals(Destination other)
