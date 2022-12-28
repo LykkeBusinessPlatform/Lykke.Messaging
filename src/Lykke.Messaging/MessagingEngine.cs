@@ -130,7 +130,7 @@ namespace Lykke.Messaging
         public Destination CreateTemporaryDestination(string transportId, string processingGroup)
         {
             return m_TransportManager
-                .GetMessagingSession(new Endpoint{TransportId = transportId}, processingGroup ?? "default")
+                .GetMessagingSession(new Endpoint(transportId, "temporary"), processingGroup ?? "default")
                 .CreateTemporaryDestination();
         }
 
@@ -225,7 +225,6 @@ namespace Lykke.Messaging
             int ttl,
             string processingGroup)
         {
-            if (endpoint.Destination == null) throw new ArgumentException("Destination can not be null");
             if (m_Disposing.WaitOne(0))
                 throw new InvalidOperationException("Engine is disposing");
 
@@ -267,7 +266,6 @@ namespace Lykke.Messaging
             string processingGroup = null,
             int priority = 0)
         {
-			if (endpoint.Destination == null) throw new ArgumentException("Destination can not be null");
             if (m_Disposing.WaitOne(0))
                 throw new InvalidOperationException("Engine is disposing");
 
@@ -356,8 +354,6 @@ namespace Lykke.Messaging
             int priority = 0,
             params Type[] knownTypes)
         {
-            if (endpoint.Destination == null)
-                throw new ArgumentException("Destination can not be null");
             if (m_Disposing.WaitOne(0))
                 throw new InvalidOperationException("Engine is disposing");
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Lykke.Messaging.Contract
 {
@@ -37,7 +38,7 @@ namespace Lykke.Messaging.Contract
         {
         }
 
-        public static implicit operator Destination(string destination)
+        public static implicit operator Destination([NotNull] string destination)
         {
             return new Destination(destination);
         }

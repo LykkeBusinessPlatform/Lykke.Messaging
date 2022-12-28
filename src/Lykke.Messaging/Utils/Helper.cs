@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Threading;
+using Lykke.Messaging.Contract;
+using Microsoft.Extensions.PlatformAbstractions;
 
 namespace Lykke.Messaging.Utils
 {
@@ -16,6 +18,14 @@ namespace Lykke.Messaging.Utils
             };
 
             return ret;
+        }
+
+        public static string BuildSessionDisplayName(Destination destination)
+        {
+            var appName = PlatformServices.Default.Application.ApplicationName;
+            var appVersion = PlatformServices.Default.Application.ApplicationVersion;
+            
+            return $"{appName} {appVersion} {destination}";
         }
     }
 }

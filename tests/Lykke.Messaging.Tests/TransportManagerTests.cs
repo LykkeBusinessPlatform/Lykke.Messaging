@@ -61,8 +61,8 @@ namespace Lykke.Messaging.Tests
             Action createdSessionOnFailure = () => { Console.WriteLine("!!"); };
             var transport = new Mock<ITransport>();
             transport
-                .Setup(t => t.CreateSession(It.IsAny<Action>(), It.IsAny<Destination>()))
-                .Callback<Action, Destination>((invocation, dst) => createdSessionOnFailure = invocation);
+                .Setup(t => t.CreateSession(It.IsAny<Action>(), It.IsAny<string>()))
+                .Callback<Action, string>((invocation, displayName) => createdSessionOnFailure = invocation);
             var factory = new Mock<ITransportFactory>();
             factory.Setup(f => f.Create(It.IsAny<TransportInfo>(), It.IsAny<Action>())).Returns(transport.Object);
             factory.Setup(f => f.Name).Returns("Mock");
@@ -70,7 +70,7 @@ namespace Lykke.Messaging.Tests
             int i = 0;
 
             transportManager.GetMessagingSession(
-                new Endpoint { TransportId = TransportConstants.TRANSPORT_ID3 },
+                new Endpoint(TransportConstants.TRANSPORT_ID3, "queue"),
                 "test",
                 () => { Interlocked.Increment(ref i); });
 
@@ -98,7 +98,7 @@ namespace Lykke.Messaging.Tests
                     try
                     {
                         transportManager.GetMessagingSession(
-                            new Endpoint { TransportId = TransportConstants.TRANSPORT_ID1 },
+                            new Endpoint(TransportConstants.TRANSPORT_ID1, "queue"),
                             "test");
                         Interlocked.Increment(ref attemptCount);
                     }
