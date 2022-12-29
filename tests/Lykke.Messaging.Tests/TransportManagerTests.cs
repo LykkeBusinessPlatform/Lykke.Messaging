@@ -39,17 +39,17 @@ namespace Lykke.Messaging.Tests
             public const string BROKER = "test";
         }
 
-        private static ITransportResolver MockTransportResolver()
+        private static ITransportInfoResolver MockTransportResolver()
         {
-            var resolver = new Mock<ITransportResolver>();
+            var resolver = new Mock<ITransportInfoResolver>();
             resolver
-                .Setup(r => r.GetTransport(TransportConstants.TRANSPORT_ID1))
+                .Setup(r => r.Resolve(TransportConstants.TRANSPORT_ID1))
                 .Returns(new TransportInfo(TransportConstants.BROKER, TransportConstants.USERNAME, TransportConstants.PASSWORD, "MachineName", "InMemory") );
             resolver
-                .Setup(r => r.GetTransport(TransportConstants.TRANSPORT_ID2))
+                .Setup(r => r.Resolve(TransportConstants.TRANSPORT_ID2))
                 .Returns(new TransportInfo(TransportConstants.BROKER, TransportConstants.USERNAME, TransportConstants.PASSWORD, "MachineName", "InMemory") );
             resolver
-                .Setup(r => r.GetTransport(TransportConstants.TRANSPORT_ID3))
+                .Setup(r => r.Resolve(TransportConstants.TRANSPORT_ID3))
                 .Returns(new TransportInfo(TransportConstants.BROKER, TransportConstants.USERNAME, TransportConstants.PASSWORD, "MachineName", "Mock") );
             return resolver.Object;
         }

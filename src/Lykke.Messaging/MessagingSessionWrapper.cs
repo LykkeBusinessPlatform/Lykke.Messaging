@@ -5,6 +5,12 @@ using Microsoft.Extensions.Logging;
 
 namespace Lykke.Messaging
 {
+    /// <summary>
+    /// @atarutin: Didn't realize the intention yet
+    /// It is implemented as decorator however it just routes calls to an
+    /// underlying messaging session. Looks like the wrapper just adds error
+    /// handling as a separate method.
+    /// </summary>
     internal class MessagingSessionWrapper:IMessagingSession
     {
 

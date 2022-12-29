@@ -55,9 +55,9 @@ namespace Lykke.Messaging.Tests.Castle
                 container.AddFacility<MessagingFacility>(m => m
                     .WithConfiguration(m_MessagingConfiguration)
                     .WithLoggerFactory(NullLoggerFactory.Instance));
-                var transportResolver = (container.Resolve<IMessagingEngine>() as MessagingEngine).TransportManager.TransportResolver;
-                Assert.That(transportResolver.GetTransport("transport-id-1"), Is.Not.Null.And.EqualTo(m_Transport1));
-                Assert.That(transportResolver.GetTransport("transport-id-2"), Is.Not.Null.And.EqualTo(m_Transport2));
+                var transportResolver = (container.Resolve<IMessagingEngine>() as MessagingEngine).TransportManager.TransportInfoResolver;
+                Assert.That(transportResolver.Resolve("transport-id-1"), Is.Not.Null.And.EqualTo(m_Transport1));
+                Assert.That(transportResolver.Resolve("transport-id-2"), Is.Not.Null.And.EqualTo(m_Transport2));
 
                 container.Register(Component.For<EndpointDependTestClass1>().WithEndpoints(new {endpoint1 = "endpoint-2"}));
                 var test1 = container.Resolve<EndpointDependTestClass1>();
@@ -76,9 +76,9 @@ namespace Lykke.Messaging.Tests.Castle
                     .WithTransport("transport-id-1", m_Transport1)
                     .WithTransport("transport-id-2", m_Transport2)
                     .WithLoggerFactory(NullLoggerFactory.Instance));
-                var transportResolver = (container.Resolve<IMessagingEngine>() as MessagingEngine).TransportManager.TransportResolver;
-                Assert.That(transportResolver.GetTransport("transport-id-1"), Is.Not.Null.And.EqualTo(m_Transport1));
-                Assert.That(transportResolver.GetTransport("transport-id-2"), Is.Not.Null.And.EqualTo(m_Transport2));
+                var transportResolver = (container.Resolve<IMessagingEngine>() as MessagingEngine).TransportManager.TransportInfoResolver;
+                Assert.That(transportResolver.Resolve("transport-id-1"), Is.Not.Null.And.EqualTo(m_Transport1));
+                Assert.That(transportResolver.Resolve("transport-id-2"), Is.Not.Null.And.EqualTo(m_Transport2));
             }
         }
 
@@ -92,9 +92,9 @@ namespace Lykke.Messaging.Tests.Castle
                     .WithTransport("transport-id-1", m_Transport1)
                     .WithTransport("transport-id-2", m_Transport2)
                     .WithLoggerFactory(NullLoggerFactory.Instance));
-                var transportResolver = (container.Resolve<IMessagingEngine>() as MessagingEngine).TransportManager.TransportResolver;
-                Assert.That(transportResolver.GetTransport("transport-id-1"), Is.Not.Null.And.EqualTo(m_Transport1));
-                Assert.That(transportResolver.GetTransport("transport-id-2"), Is.Not.Null.And.EqualTo(m_Transport2));
+                var transportResolver = (container.Resolve<IMessagingEngine>() as MessagingEngine).TransportManager.TransportInfoResolver;
+                Assert.That(transportResolver.Resolve("transport-id-1"), Is.Not.Null.And.EqualTo(m_Transport1));
+                Assert.That(transportResolver.Resolve("transport-id-2"), Is.Not.Null.And.EqualTo(m_Transport2));
             }
         }      
         

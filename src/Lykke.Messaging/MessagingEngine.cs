@@ -31,7 +31,7 @@ namespace Lykke.Messaging
 
         public MessagingEngine(
             ILoggerFactory loggerFactory,
-            ITransportResolver transportResolver,
+            ITransportInfoResolver transportInfoResolver,
             IDictionary<string, ProcessingGroupInfo> processingGroups = null,
             params ITransportFactory[] transportFactories)
         {
@@ -39,14 +39,14 @@ namespace Lykke.Messaging
             {
                 throw new ArgumentNullException(nameof(loggerFactory));
             }
-            if (transportResolver == null)
+            if (transportInfoResolver == null)
             {
-                throw new ArgumentNullException(nameof(transportResolver));
+                throw new ArgumentNullException(nameof(transportInfoResolver));
             }
 
             _logger = loggerFactory.CreateLogger<MessagingEngine>();
 
-            m_TransportManager = new TransportManager(loggerFactory, transportResolver, transportFactories);
+            m_TransportManager = new TransportManager(loggerFactory, transportInfoResolver, transportFactories);
             m_ProcessingGroupManager = new ProcessingGroupManager(loggerFactory, m_TransportManager, processingGroups);
             m_SerializationManager = new SerializationManager(loggerFactory);
             m_RequestTimeoutManager = new SchedulingBackgroundWorker("RequestTimeoutManager", () => StopTimeoutedRequests());
@@ -56,9 +56,9 @@ namespace Lykke.Messaging
 
         public MessagingEngine(
             ILoggerFactory loggerFactory,
-            ITransportResolver transportResolver,
+            ITransportInfoResolver transportInfoResolver,
             params ITransportFactory[] transportFactories)
-            : this(loggerFactory, transportResolver, null, transportFactories)
+            : this(loggerFactory, transportInfoResolver, null, transportFactories)
         {
         }
 

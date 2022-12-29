@@ -143,7 +143,7 @@ namespace Lykke.Messaging.Castle
             Kernel.Resolver.AddSubResolver(subDependencyResolver);
 
             m_MessagingEngine = new MessagingEngine(_loggerFactory, 
-                new TransportResolver(MessagingConfiguration.GetTransports() ?? new Dictionary<string, TransportInfo>(), m_JailStrategies),
+                new TransportInfoResolver(MessagingConfiguration.GetTransports() ?? new Dictionary<string, TransportInfo>(), m_JailStrategies),
                 MessagingConfiguration.GetProcessingGroups(),
                 m_TransportFactories.ToArray());
 
