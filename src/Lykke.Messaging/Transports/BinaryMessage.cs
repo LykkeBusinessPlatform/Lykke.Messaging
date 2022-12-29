@@ -11,6 +11,6 @@ namespace Lykke.Messaging.Transports
 
         public byte[] Bytes { get; set; }
         public string Type { get; set; }
-        public Dictionary<string, string> Headers { get; private set; }
+        public Dictionary<string, string> Headers { get; }
     }
 }

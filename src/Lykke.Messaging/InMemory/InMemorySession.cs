@@ -24,7 +24,7 @@ namespace Lykke.Messaging.InMemory
         {
             var name = Guid.NewGuid().ToString();
             m_Transport.CreateTemporary(name);
-            return name;
+            return new Destination(name);
         }
 
         public void Send(string destination, BinaryMessage message, int ttl)

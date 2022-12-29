@@ -63,7 +63,7 @@ namespace Lykke.Messaging.Tests
                         {"transport-1", new TransportInfo("transport-1", "login1", "pwd1", "None", "InMemory")}
                     }));
             var processingGroupManager = new ProcessingGroupManager(_loggerFactory, transportManager);
-            var endpoint = new Endpoint {Destination = "queue", TransportId = "transport-1"};
+            var endpoint = new Endpoint("transport-1", "queue");
             var session = transportManager.GetMessagingSession(endpoint, "pg");
             var usedThreads = new List<int>();
             var subscription = processingGroupManager.Subscribe(endpoint,
@@ -99,7 +99,7 @@ namespace Lykke.Messaging.Tests
                     "pg", new ProcessingGroupInfo() {ConcurrencyLevel = 3}
                 }
             });
-            var endpoint = new Endpoint {Destination = "queue", TransportId = "transport-1"};
+            var endpoint = new Endpoint("transport-1", "queue");
             var processingGroup = transportManager.GetMessagingSession(endpoint, "pg");
             var usedThreads = new List<int>();
             var subscription = processingGroupManager.Subscribe(
@@ -147,7 +147,7 @@ namespace Lykke.Messaging.Tests
             });
 
             var e = new ManualResetEvent(false);
-            var endpoint = new Endpoint {Destination = "queue", TransportId = "transport-1"};
+            var endpoint = new Endpoint("transport-1", "queue");
             var processingGroup = transportManager.GetMessagingSession(endpoint, "pg");
             var childTaskFinishedBeforeHandler = false;
             var subscription = processingGroupManager.Subscribe(
@@ -201,9 +201,9 @@ namespace Lykke.Messaging.Tests
                 Thread.Sleep(50);
             };
 
-            var subscription0 = processingGroupManager.Subscribe(new Endpoint { Destination = "queue0", TransportId = "transport-1" }, callback, null, "pg", 0);
-            var subscription1 = processingGroupManager.Subscribe(new Endpoint { Destination = "queue1", TransportId = "transport-1" }, callback, null, "pg", 1);
-            var subscription2 = processingGroupManager.Subscribe(new Endpoint { Destination = "queue2", TransportId = "transport-1" }, callback, null, "pg", 2);
+            var subscription0 = processingGroupManager.Subscribe(new Endpoint("transport-1", "queue0"), callback, null, "pg", 0);
+            var subscription1 = processingGroupManager.Subscribe(new Endpoint("transport-1", "queue1"), callback, null, "pg", 1);
+            var subscription2 = processingGroupManager.Subscribe(new Endpoint("transport-1", "queue2"), callback, null, "pg", 2);
 
             using (subscription0)
             using (subscription1)
@@ -212,7 +212,7 @@ namespace Lykke.Messaging.Tests
                 Enumerable.Range(1, 20)
                     .ToList()
                     .ForEach(i => processingGroupManager.Send(
-                        new Endpoint { Destination = "queue" + i % 3, TransportId = "transport-1" },
+                        new Endpoint("transport-1", "queue" + i % 3),
                         new BinaryMessage { Bytes = Encoding.UTF8.GetBytes((i % 3).ToString()) },
                         0,
                         "pg"));

@@ -118,7 +118,7 @@ namespace Lykke.Messaging.Castle
 
         protected override void Dispose()
         {
-            m_MessagingEngine.Dispose();
+            m_MessagingEngine?.Dispose();
             base.Dispose();
         }
 

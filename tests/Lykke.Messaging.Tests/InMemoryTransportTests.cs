@@ -23,7 +23,7 @@ namespace Lykke.Messaging.Tests
             bool processedOnce = false;
             using (var transport = new InMemoryTransport())
             {
-                IMessagingSession messagingSession = transport.CreateSession(null);
+                IMessagingSession messagingSession = transport.CreateSession(null, "queue");
                 messagingSession.Subscribe(TEST_TOPIC, (message, ack) =>
                 {
                     var receivedGuid = new Guid(message.Bytes);
@@ -55,7 +55,7 @@ namespace Lykke.Messaging.Tests
             {
                 var delivered1=new ManualResetEvent(false);
                 var delivered2=new ManualResetEvent(false);
-                IMessagingSession messagingSession = transport.CreateSession(null);
+                IMessagingSession messagingSession = transport.CreateSession(null, "whatever");
                 messagingSession.Subscribe(TEST_TOPIC, (message,ack) =>
                     {
                         delivered1.Set();
@@ -91,7 +91,7 @@ namespace Lykke.Messaging.Tests
                 byte[] actualResponse = null;
                 var received = new ManualResetEvent(false);
 
-                var session = transport.CreateSession(null);
+                var session = transport.CreateSession(null, "whatever");
                 session.RegisterHandler(TEST_TOPIC, message => new BinaryMessage { Bytes = response, Type = typeof(byte[]).Name }, null);
                 session.SendRequest(TEST_TOPIC, new BinaryMessage { Bytes = request, Type = typeof(byte[]).Name }, message =>
                 {
@@ -109,7 +109,7 @@ namespace Lykke.Messaging.Tests
             using (var transport = new InMemoryTransport())
             {
                 var ev = new AutoResetEvent(false);
-                IMessagingSession messagingSession = transport.CreateSession(null);
+                IMessagingSession messagingSession = transport.CreateSession(null, "whatever");
                 IDisposable subscription = messagingSession.Subscribe(TEST_TOPIC, (message, ack) => ev.Set(), null);
                 messagingSession.Send(TEST_TOPIC, new BinaryMessage { Bytes = new byte[] { 0x0, 0x1, 0x2 }, Type = null }, 0);
                 Assert.That(ev.WaitOne(500), Is.True, "Message was not delivered");
@@ -124,7 +124,7 @@ namespace Lykke.Messaging.Tests
             ManualResetEvent delivered = new ManualResetEvent(false);
             int deliveredMessagesCount = 0;
             var transport = new InMemoryTransport();
-                IMessagingSession messagingSession = transport.CreateSession(null);
+                IMessagingSession messagingSession = transport.CreateSession(null, "whatever");
                 messagingSession.Subscribe(TEST_TOPIC, (message, ack) =>
                     {
                         delivered.WaitOne();

@@ -40,7 +40,7 @@ namespace Lykke.Messaging.InMemory
             }
         }
 
-        public IMessagingSession CreateSession(Action onFailure, Destination destination = default(Destination))
+        public IMessagingSession CreateSession(Action onFailure, string displayName)
         {
             var session = new InMemorySession(this);
             lock (m_Sessions)
