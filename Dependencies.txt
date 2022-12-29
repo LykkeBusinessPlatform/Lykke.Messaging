@@ -1,0 +1,43 @@
+MessagingEngine has TransportManager
+MessagingEngine has ProcessingGroupManager
+
+ProcessingGroupManager has TransportManager
+
+TransportManager has a map of {TransportInfo, ResolvedTransport}
+TransportManager has TransportInfoResolver
+TransportManager has a list of TransportFactory
+TransportManager creates MessagingSession via ResolvedTransport
+
+TransportInfo is a DTO for message broker connection properties
+TransportInfo has Broker connection string
+TransportInfo has Login
+TransportInfo has Password
+TransportInfo has JailStrategyName
+TransportInfo has Messaging
+
+ResolvedTransport has a list of known TransportId
+ResolvedTransport has TransportInfo
+ResolvedTransport has TransportFailureAction
+ResolvedTransport has TransportFactory
+ResolvedTransport has a list of MessagingSession
+ResolvedTransport has Transport
+ResolvedTransport creates MessagingSession via Transport
+
+TransportInfoResolver has a map of {TransportId, TransportInfo}
+TransportInfoResolver has a map of {JailStrategyId?, JailStrategy}
+
+RabbitMqTransportFactory(TransportFactory) has a map of {TransportInfo, RabbitMqTransport}
+RabbitMqTransportFactory(TransportFactory) creates RabbitMqTransport
+
+TransportFactory creates Transport with (TransportInfo, TransportFailureAction)
+TransportFactory has a map of {TransportInfo, Transport}
+
+RabbitMqTransport(Transport) has a list of ConnectionFactory
+RabbitMqTransport(Transport) has a list of RabbitMqSession
+RabbitMqTransport(Transport) creates Connection
+RabbitMqTransport(Transport) creates MessagingSession
+RabbitMqTransport(Transport) verifies destination
+
+RabbitMqSession(MessagingSession) has Connection
+RabbitMqSession(MessagingSession) has Channel aka Model
+RabbitMqSession(MessagingSession) has a map of consumers {Destination, Consumer}
