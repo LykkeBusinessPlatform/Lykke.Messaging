@@ -14,19 +14,19 @@ namespace Lykke.Messaging
     internal class TransportManager : ITransportManager
     {
         private readonly ConcurrentDictionary<TransportInfo, ResolvedTransport> m_Transports = new ConcurrentDictionary<TransportInfo, ResolvedTransport>();
-        private readonly ITransportResolver m_TransportResolver;
+        private readonly ITransportInfoResolver m_TransportInfoResolver;
         private readonly ManualResetEvent m_IsDisposed = new ManualResetEvent(false);
         private readonly ITransportFactory[] m_TransportFactories;
         private readonly ILoggerFactory _loggerFactory;
 
-        public TransportManager(ILoggerFactory loggerFactory, ITransportResolver transportResolver, params ITransportFactory[] transportFactories)
+        public TransportManager(ILoggerFactory loggerFactory, ITransportInfoResolver transportInfoResolver, params ITransportFactory[] transportFactories)
         {
             _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
             m_TransportFactories = transportFactories.Concat(new[] { new InMemoryTransportFactory() }).ToArray();
-            m_TransportResolver = transportResolver ?? throw new ArgumentNullException(nameof(transportResolver));
+            m_TransportInfoResolver = transportInfoResolver ?? throw new ArgumentNullException(nameof(transportInfoResolver));
         }
 
-        public ITransportResolver TransportResolver => m_TransportResolver;
+        public ITransportInfoResolver TransportInfoResolver => m_TransportInfoResolver;
 
         #region IDisposable Members
 
@@ -63,7 +63,7 @@ namespace Lykke.Messaging
             if (m_IsDisposed.WaitOne(0))
                 throw new ObjectDisposedException($"Can not create transport {transportId}. TransportManager instance is disposed");
 
-            var transportInfo = m_TransportResolver.GetTransport(transportId);
+            var transportInfo = m_TransportInfoResolver.Resolve(transportId);
             if (transportInfo == null)
                 throw new ApplicationException($"Transport '{transportId}' is not resolvable");
 

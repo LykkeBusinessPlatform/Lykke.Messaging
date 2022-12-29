@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Lykke.Messaging
 {
-    public class TransportResolver : ITransportResolver
+    public class TransportInfoResolver : ITransportInfoResolver
     {
         private readonly Dictionary<string, TransportInfo> m_Transports = new Dictionary<string, TransportInfo>();
         private readonly Dictionary<string, JailStrategy> m_JailStrategies = new Dictionary<string, JailStrategy>
@@ -14,7 +14,7 @@ namespace Lykke.Messaging
         };
 
         //TODO: need to register transports in some better way
-        public TransportResolver(IDictionary<string, TransportInfo> transports, IDictionary<string, JailStrategy> jailStrategies = null)
+        public TransportInfoResolver(IDictionary<string, TransportInfo> transports, IDictionary<string, JailStrategy> jailStrategies = null)
         {
             if (transports == null)
                 throw new ArgumentNullException(nameof(transports));
@@ -49,7 +49,7 @@ namespace Lykke.Messaging
 
         #region ITransportResolver Members
 
-        public TransportInfo GetTransport(string transportId)
+        public TransportInfo Resolve(string transportId)
         {
             return m_Transports.TryGetValue(transportId, out var transport) ? transport : null;
         }

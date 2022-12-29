@@ -58,7 +58,7 @@ namespace Lykke.Messaging.Tests
         {
             var transportManager = new TransportManager(
                 _loggerFactory,
-                new TransportResolver(new Dictionary<string, TransportInfo>
+                new TransportInfoResolver(new Dictionary<string, TransportInfo>
                     {
                         {"transport-1", new TransportInfo("transport-1", "login1", "pwd1", "None", "InMemory")}
                     }));
@@ -89,7 +89,7 @@ namespace Lykke.Messaging.Tests
         {
             var transportManager = new TransportManager(
                 _loggerFactory,
-                new TransportResolver(new Dictionary<string, TransportInfo>
+                new TransportInfoResolver(new Dictionary<string, TransportInfo>
                     {
                         {"transport-1", new TransportInfo("transport-1", "login1", "pwd1", "None", "InMemory")}
                     }));
@@ -135,7 +135,7 @@ namespace Lykke.Messaging.Tests
         {
             var transportManager = new TransportManager(
                 _loggerFactory,
-                new TransportResolver(new Dictionary<string, TransportInfo>
+                new TransportInfoResolver(new Dictionary<string, TransportInfo>
                     {
                         {"transport-1", new TransportInfo("transport-1", "login1", "pwd1", "None", "InMemory")}
                     }));
@@ -175,7 +175,7 @@ namespace Lykke.Messaging.Tests
         {
             var transportManager = new TransportManager(
                 _loggerFactory,
-                new TransportResolver(new Dictionary<string, TransportInfo>
+                new TransportInfoResolver(new Dictionary<string, TransportInfo>
                     {
                         {"transport-1", new TransportInfo("transport-1", "login1", "pwd1", "None", "InMemory")}
                     }));
