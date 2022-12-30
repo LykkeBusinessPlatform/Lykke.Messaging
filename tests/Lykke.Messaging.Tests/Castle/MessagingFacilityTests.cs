@@ -29,8 +29,8 @@ namespace Lykke.Messaging.Tests.Castle
         [SetUp]
         public void SetUp()
         {
-            m_Endpoint1 = new Endpoint("transport-id-1", "first-destination", serializationFormat: SerializationFormat.Json);
-            m_Endpoint2 = new Endpoint("transport-id-2", "second-destination", serializationFormat: SerializationFormat.Json);
+            m_Endpoint1 = new Endpoint("transport-id-1", new Destination("first-destination"), serializationFormat: SerializationFormat.Json);
+            m_Endpoint2 = new Endpoint("transport-id-2", new Destination("second-destination"), serializationFormat: SerializationFormat.Json);
             m_Transport1 = new TransportInfo("transport-1", "login1", "pwd1", "None", "InMemory");
             m_Transport2 = new TransportInfo("transport-2", "login2", "pwd1", "None", "InMemory");
             m_MessagingConfiguration = new MockMessagingConfiguration(
@@ -164,7 +164,7 @@ namespace Lykke.Messaging.Tests.Castle
                     .WithLoggerFactory(NullLoggerFactory.Instance));
                 var engine = container.Resolve<IMessagingEngine>();
                 var ev = new ManualResetEvent(false);
-                var endpoint = new Endpoint("TRANSPORT_ID1", "destination", serializationFormat: SerializationFormat.Json);
+                var endpoint = new Endpoint("TRANSPORT_ID1", new Destination("destination"), serializationFormat: SerializationFormat.Json);
                 using (engine.Subscribe<string>(endpoint, s =>
                 {
                     Console.WriteLine(s);

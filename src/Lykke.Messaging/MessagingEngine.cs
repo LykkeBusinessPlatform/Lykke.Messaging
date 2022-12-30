@@ -130,7 +130,7 @@ namespace Lykke.Messaging
         public Destination CreateTemporaryDestination(string transportId, string processingGroup)
         {
             return m_TransportManager
-                .GetMessagingSession(new Endpoint(transportId, "temporary"), processingGroup ?? "default")
+                .GetMessagingSession(new Endpoint(transportId, new Destination("temporary")), processingGroup ?? "default")
                 .CreateTemporaryDestination();
         }
 
