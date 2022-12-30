@@ -38,7 +38,7 @@ namespace Lykke.Messaging.Contract
 
         public Endpoint(
             string transportId,
-            string destination,
+            Destination destination,
             bool sharedDestination = false,
             SerializationFormat serializationFormat = SerializationFormat.ProtoBuf)
 	    {
@@ -46,10 +46,7 @@ namespace Lykke.Messaging.Contract
 			    throw new ArgumentNullException(nameof(transportId), "TransportId must be specified");
 		    TransportId = transportId;
 
-		    if (string.IsNullOrWhiteSpace(destination))
-			    throw new ArgumentNullException(nameof(destination), "Destination must be specified");
-		    Destination = new Destination(destination);
-
+		    Destination = destination;
 		    SharedDestination = sharedDestination;
 		    SerializationFormat = serializationFormat;
 		}
