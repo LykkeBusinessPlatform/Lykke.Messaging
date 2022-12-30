@@ -70,7 +70,7 @@ namespace Lykke.Messaging.Tests
             int i = 0;
 
             transportManager.GetMessagingSession(
-                new Endpoint(TransportConstants.TRANSPORT_ID3, "queue"),
+                new Endpoint(TransportConstants.TRANSPORT_ID3, new Destination("queue")),
                 "test",
                 () => { Interlocked.Increment(ref i); });
 
@@ -98,7 +98,7 @@ namespace Lykke.Messaging.Tests
                     try
                     {
                         transportManager.GetMessagingSession(
-                            new Endpoint(TransportConstants.TRANSPORT_ID1, "queue"),
+                            new Endpoint(TransportConstants.TRANSPORT_ID1, new Destination("queue")),
                             "test");
                         Interlocked.Increment(ref attemptCount);
                     }

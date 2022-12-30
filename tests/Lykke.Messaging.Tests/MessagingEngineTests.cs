@@ -55,9 +55,9 @@ namespace Lykke.Messaging.Tests
 
                 //need for transportManager to start tracking transport failures for these ids
                 engine.TransportManager.GetMessagingSession(
-                    new Endpoint (TransportConstants.TRANSPORT_ID1, "whatever"), "test");
+                    new Endpoint (TransportConstants.TRANSPORT_ID1, new Destination("whatever")), "test");
                 engine.TransportManager.GetMessagingSession(
-                    new Endpoint (TransportConstants.TRANSPORT_ID2, "whatever"), "test");
+                    new Endpoint (TransportConstants.TRANSPORT_ID2, new Destination("whatever")), "test");
 
                 engine.TransportManager.ProcessTransportFailure(
                     new TransportInfo(TransportConstants.BROKER,
@@ -80,25 +80,25 @@ namespace Lykke.Messaging.Tests
                 var queue2MessagesThreadIds = new List<int>();
                 var messagesCounter = 0;
                 var allMessagesAreRecieved=new ManualResetEvent(false);
-                using (engine.Subscribe<string>(new Endpoint(TransportConstants.TRANSPORT_ID1, TransportConstants.QUEUE1, serializationFormat: SerializationFormat.Json), s =>
+                using (engine.Subscribe<string>(new Endpoint(TransportConstants.TRANSPORT_ID1, new Destination(TransportConstants.QUEUE1), serializationFormat: SerializationFormat.Json), s =>
                 {
                     queue1MessagesThreadIds.Add(Thread.CurrentThread.ManagedThreadId);
                     Console.WriteLine(Thread.CurrentThread.ManagedThreadId);
                     if (Interlocked.Increment(ref messagesCounter) == 6) allMessagesAreRecieved.Set();
                 }))
-                using (engine.Subscribe<string>(new Endpoint(TransportConstants.TRANSPORT_ID1, TransportConstants.QUEUE2, serializationFormat: SerializationFormat.Json), s =>
+                using (engine.Subscribe<string>(new Endpoint(TransportConstants.TRANSPORT_ID1, new Destination(TransportConstants.QUEUE2), serializationFormat: SerializationFormat.Json), s =>
                 {
                     queue2MessagesThreadIds.Add(Thread.CurrentThread.ManagedThreadId);
                     Console.WriteLine(Thread.CurrentThread.ManagedThreadId);
                     if (Interlocked.Increment(ref messagesCounter) == 6) allMessagesAreRecieved.Set();
                 }))
                 {
-                    engine.Send("test", new Endpoint(TransportConstants.TRANSPORT_ID1, TransportConstants.QUEUE1, serializationFormat: SerializationFormat.Json));
-                    engine.Send("test", new Endpoint(TransportConstants.TRANSPORT_ID1, TransportConstants.QUEUE2, serializationFormat: SerializationFormat.Json));
-                    engine.Send("test", new Endpoint(TransportConstants.TRANSPORT_ID1, TransportConstants.QUEUE1, serializationFormat: SerializationFormat.Json));
-                    engine.Send("test", new Endpoint(TransportConstants.TRANSPORT_ID1, TransportConstants.QUEUE2, serializationFormat: SerializationFormat.Json));
-                    engine.Send("test", new Endpoint(TransportConstants.TRANSPORT_ID1, TransportConstants.QUEUE1, serializationFormat: SerializationFormat.Json));
-                    engine.Send("test", new Endpoint(TransportConstants.TRANSPORT_ID1, TransportConstants.QUEUE2, serializationFormat: SerializationFormat.Json));
+                    engine.Send("test", new Endpoint(TransportConstants.TRANSPORT_ID1, new Destination(TransportConstants.QUEUE1), serializationFormat: SerializationFormat.Json));
+                    engine.Send("test", new Endpoint(TransportConstants.TRANSPORT_ID1, new Destination(TransportConstants.QUEUE2), serializationFormat: SerializationFormat.Json));
+                    engine.Send("test", new Endpoint(TransportConstants.TRANSPORT_ID1, new Destination(TransportConstants.QUEUE1), serializationFormat: SerializationFormat.Json));
+                    engine.Send("test", new Endpoint(TransportConstants.TRANSPORT_ID1, new Destination(TransportConstants.QUEUE2), serializationFormat: SerializationFormat.Json));
+                    engine.Send("test", new Endpoint(TransportConstants.TRANSPORT_ID1, new Destination(TransportConstants.QUEUE1), serializationFormat: SerializationFormat.Json));
+                    engine.Send("test", new Endpoint(TransportConstants.TRANSPORT_ID1, new Destination(TransportConstants.QUEUE2), serializationFormat: SerializationFormat.Json));
                     allMessagesAreRecieved.WaitOne(1000);
                 }
                 Assert.That(queue1MessagesThreadIds.Distinct().Any(), Is.True, "Messages were not processed");
