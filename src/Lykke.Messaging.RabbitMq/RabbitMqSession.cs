@@ -63,7 +63,8 @@ namespace Lykke.Messaging.RabbitMq
         public Destination CreateTemporaryDestination()
         {
             var queueName = m_Model.QueueDeclare().QueueName;
-            return new Destination { Subscribe = queueName, Publish = new PublicationAddress("direct", "", queueName).ToString() };
+            return new Destination
+                { Publish = new PublicationAddress("direct", "", queueName).ToString(), Subscribe = queueName };
         }
 
         public void Send(string destination, BinaryMessage message, int ttl)
@@ -261,6 +262,9 @@ namespace Lykke.Messaging.RabbitMq
 
             try
             {
+                // @atarutin TODO: RabbitMQ session cannot be responsible for
+                // destroying connection cause it doesn't create it. Moreover,
+                // connection can be potentially shared among sessions
                 m_Connection.Close();
                 m_Connection.Dispose();
             }
