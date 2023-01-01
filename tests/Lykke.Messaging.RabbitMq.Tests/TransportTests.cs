@@ -393,7 +393,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
 
             var messagingEngine = new MessagingEngine(
                 NullLoggerFactory.Instance,
-                new TransportInfoResolver(new Dictionary<string, TransportInfo> {{"test", new TransportInfo(HOST, "guest", "guest", null, "RabbitMq")}}),
+                new TransportResolver(new Dictionary<string, TransportInfo> {{"test", new TransportInfo(HOST, "guest", "guest", null, "RabbitMq")}}),
                 new RabbitMqTransportFactory(NullLoggerFactory.Instance));
 
             using (messagingEngine)
@@ -420,7 +420,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
         {
             using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
-                var res = transport.VerifyDestination(new Destination("unistream.processing.events"), EndpointUsage.Publish | EndpointUsage.Subscribe, false, out var error);
+                var res = transport.VerifyDestination("unistream.processing.events", EndpointUsage.Publish | EndpointUsage.Subscribe, false, out var error);
                 Console.WriteLine(error);
                 Assert.That(res,Is.False);
             }
@@ -429,10 +429,11 @@ namespace Lykke.Messaging.RabbitMq.Tests
         [Test]
         public void DefaultExchangeVerificationTest()
         {
-            var defaultExchangeDestination = new Destination(
-                new PublicationAddress("direct", "", m_TempQueue).ToString(),
-                m_TempQueue
-            );
+            var defaultExchangeDestination = new Destination
+            {
+                Publish = new PublicationAddress("direct", "", m_TempQueue).ToString(),
+                Subscribe = m_TempQueue
+            };
 
             using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
@@ -501,7 +502,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
         public string VerifyPublishEndpointFailureTest()
         {
             var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest");
-            var valid = transport.VerifyDestination(new Destination("non.existing"), EndpointUsage.Publish, false, out var error);
+            var valid = transport.VerifyDestination("non.existing", EndpointUsage.Publish, false, out var error);
             Assert.That(valid,Is.False, "endpoint reported as valid");
             Assert.That(error, Is.EqualTo(@"The AMQP operation was interrupted: AMQP close-reason, initiated by Peer, code=404, text=""NOT_FOUND - no exchange 'non.existing' in vhost '/'"", classId=40, methodId=10, cause="));
             return error;
@@ -511,7 +512,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
         public string VerifySubscriptionEndpointNoExchangeFailureTest()
         {
             var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest");
-            var valid = transport.VerifyDestination(new Destination("non.existing", "non.existing"), EndpointUsage.Subscribe, false, out var error);
+            var valid = transport.VerifyDestination("non.existing", EndpointUsage.Subscribe, false, out var error);
             Assert.That(valid,Is.False, "endpoint reported as valid");
             Assert.That(error, Is.EqualTo(@"The AMQP operation was interrupted: AMQP close-reason, initiated by Peer, code=404, text=""NOT_FOUND - no exchange 'non.existing' in vhost '/'"", classId=40, methodId=10, cause="));
             return error;
@@ -522,7 +523,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
         public string VerifySubscriptionEndpointNoQueueFailureTest()
         {
             var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest");
-            var valid = transport.VerifyDestination(new Destination("amq.direct", "non.existing"), EndpointUsage.Subscribe, false, out var error);
+            var valid = transport.VerifyDestination(new Destination{Subscribe = "amq.direct", Publish = "non.existing"}, EndpointUsage.Subscribe, false, out var error);
             Assert.That(valid,Is.False, "endpoint reported as valid");
             Assert.That(error, Is.EqualTo(@"The AMQP operation was interrupted: AMQP close-reason, initiated by Peer, code=404, text=""NOT_FOUND - no queue 'non.existing' in vhost '/'"", classId=50, methodId=10, cause="));
             return error;
@@ -533,12 +534,12 @@ namespace Lykke.Messaging.RabbitMq.Tests
         public void SubscriptionToClusterTest()
         {
 
-            ITransportInfoResolver transportInfoResolver = new TransportInfoResolver(new Dictionary<string, TransportInfo>()
+            ITransportResolver transportInfoResolver = new TransportResolver(new Dictionary<string, TransportInfo>()
             {
                 {"main", new TransportInfo("localhost1,localhost", "guest", "guest", "None", "RabbitMq")},
                 {"sendTransport", new TransportInfo("localhost", "guest", "guest", "None", "RabbitMq")}
             });
-            var endpoint = new Endpoint("main", new Destination(TEST_EXCHANGE, TEST_QUEUE), true, SerializationFormat.Json);
+            var endpoint = new Endpoint("main", TEST_EXCHANGE, TEST_QUEUE, true, SerializationFormat.Json);
             var sendEndpoint = new Endpoint("sendTransport", TEST_EXCHANGE, TEST_QUEUE, true, SerializationFormat.Json);
 
 
