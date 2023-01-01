@@ -91,7 +91,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
             using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
                 var delivered=new ManualResetEvent(false);
-                IMessagingSession messagingSession = transport.CreateSession(null, name: null);
+                IMessagingSession messagingSession = transport.CreateSession(null);
                 messagingSession.Send(TEST_EXCHANGE, new BinaryMessage {Bytes = new byte[] {0x0, 0x1, 0x2}, Type = typeof (byte[]).Name}, 0);
                 messagingSession.Subscribe(TEST_QUEUE, (message, acknowledge) =>
                     {
@@ -110,7 +110,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
             using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
                 var delivered = new ManualResetEvent(false);
-                IMessagingSession messagingSession = transport.CreateSession(()=>Console.WriteLine("onFailure called"), name: null);
+                IMessagingSession messagingSession = transport.CreateSession( ()=>Console.WriteLine("onFailure called"));
                 /*FieldInfo field = typeof(RabbitMqSession).GetField("m_Connection", BindingFlags.NonPublic | BindingFlags.Instance);
                 var connection = field.GetValue(messagingSession) as IConnection;
                 connection.Abort(1, "All your base are belong to us");*/
@@ -138,7 +138,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
             using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
                 var delivered=new ManualResetEvent(false);
-                IMessagingSession messagingSession = transport.CreateSession(null, name: null);
+                IMessagingSession messagingSession = transport.CreateSession( null);
                 messagingSession.Send(TEST_EXCHANGE, new BinaryMessage {Bytes = new byte[] {0x0, 0x1, 0x2}, Type = typeof (byte[]).Name}, 0);
                 messagingSession.Subscribe(TEST_QUEUE, (message, acknowledge) =>
                     {
@@ -152,7 +152,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
             using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
                 var delivered = new ManualResetEvent(false);
-                IMessagingSession messagingSession = transport.CreateSession(null, name: null);
+                IMessagingSession messagingSession = transport.CreateSession(null);
                 messagingSession.Subscribe(TEST_QUEUE, (message, acknowledge) => delivered.Set(), typeof(byte[]).Name);
                 Assert.That(delivered.WaitOne(500), Is.False, "Message was returned to queue");
             }
@@ -163,7 +163,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
             using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
                 var delivered=new ManualResetEvent(false);
-                IMessagingSession messagingSession = transport.CreateSession(null, name: null);
+                IMessagingSession messagingSession = transport.CreateSession( null);
                 messagingSession.Send(TEST_EXCHANGE, new BinaryMessage {Bytes = new byte[] {0x0, 0x1, 0x2}, Type = typeof (byte[]).Name}, 0);
                 messagingSession.Subscribe(TEST_QUEUE, (message, acknowledge) =>
                     {
@@ -177,7 +177,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
             using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
                 var delivered = new ManualResetEvent(false);
-                IMessagingSession messagingSession = transport.CreateSession(null, name: null);
+                IMessagingSession messagingSession = transport.CreateSession(null);
                 messagingSession.Subscribe(TEST_QUEUE, (message, acknowledge) => delivered.Set(), typeof(byte[]).Name);
                 Assert.That(delivered.WaitOne(1000), Is.True, "Message was not returned to queue");
             }
@@ -194,7 +194,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
                 byte[] actualResponse = null;
                 var received = new ManualResetEvent(false);
 
-                var session = transport.CreateSession(null, name: null);
+                var session = transport.CreateSession( null);
                 session.RegisterHandler(TEST_QUEUE, message => new BinaryMessage {Bytes = response, Type = typeof (byte[]).Name}, null);
                 session.SendRequest(TEST_EXCHANGE, new BinaryMessage { Bytes = request, Type = typeof(byte[]).Name }, message =>
                     {
@@ -214,7 +214,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
             using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
                 var ev = new AutoResetEvent(false);
-                IMessagingSession messagingSession = transport.CreateSession(null, name: null);
+                IMessagingSession messagingSession = transport.CreateSession( null);
                 messagingSession.Send(TEST_EXCHANGE, new BinaryMessage {Bytes = new byte[] {0x0, 0x1, 0x2}, Type = messageType}, 0);
                 IDisposable subscription = messagingSession.Subscribe(TEST_QUEUE, (message, acknowledge) => ev.Set(), messageType);
                 Assert.That(ev.WaitOne(500), Is.True, "Message was not delivered");
@@ -229,11 +229,11 @@ namespace Lykke.Messaging.RabbitMq.Tests
             using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
                 var onFailureCalled = new AutoResetEvent(false);
-                IMessagingSession messagingSession = transport.CreateSession(() =>
-                {
-                    onFailureCalled.Set();
-                    Console.WriteLine(Thread.CurrentThread.ManagedThreadId);
-                }, name: null);
+                IMessagingSession messagingSession = transport.CreateSession( () =>
+                    {
+                        onFailureCalled.Set();
+                        Console.WriteLine(Thread.CurrentThread.ManagedThreadId);
+                    });
                 messagingSession.Send(TEST_EXCHANGE, new BinaryMessage {Bytes = new byte[] {0x0, 0x1, 0x2}, Type = "messageType"}, 0);
                 messagingSession.Subscribe(TEST_QUEUE, (message, acknowledge) => { }, "messageType");
                 FieldInfo field = typeof (RabbitMqSession).GetField("m_Connection", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -250,11 +250,11 @@ namespace Lykke.Messaging.RabbitMq.Tests
             using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
                 var onFailureCalled = new AutoResetEvent(false);
-                IMessagingSession messagingSession = transport.CreateSession(() =>
-                {
-                    onFailureCalled.Set();
-                    Console.WriteLine(Thread.CurrentThread.ManagedThreadId);
-                }, name: null);
+                IMessagingSession messagingSession = transport.CreateSession( () =>
+                    {
+                        onFailureCalled.Set();
+                        Console.WriteLine(Thread.CurrentThread.ManagedThreadId);
+                    });
 
                 messagingSession.Send(TEST_EXCHANGE, new BinaryMessage {Bytes = new byte[] {0x0, 0x1, 0x2}, Type = "messageType"}, 0);
                 FieldInfo field = typeof (RabbitMqSession).GetField("m_Connection", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -282,7 +282,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
         {
             using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
-                IMessagingSession messagingSession = transport.CreateSession(null, name: null);
+                IMessagingSession messagingSession = transport.CreateSession( null);
                 var received = new AutoResetEvent(false);
                 IDisposable subscription = messagingSession.Subscribe(TEST_QUEUE, (message, acknowledge) =>
                     {
@@ -302,7 +302,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
         {
             using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
-                IMessagingSession messagingSession = transport.CreateSession(null, name: null);
+                IMessagingSession messagingSession = transport.CreateSession( null);
                 var type1Received = new AutoResetEvent(false);
                 var type2Received = new AutoResetEvent(false);
 
@@ -340,7 +340,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
             Thread connectionThread = null;
             using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
-                IMessagingSession messagingSession = transport.CreateSession(null, name: null);
+                IMessagingSession messagingSession = transport.CreateSession( null);
                 messagingSession.Subscribe(TEST_QUEUE, (message, acknowledge) =>
                     {
                         connectionThread = Thread.CurrentThread;
@@ -400,10 +400,10 @@ namespace Lykke.Messaging.RabbitMq.Tests
             {
                 for (int i = 0; i < 100; i++)
                 {
-                    messagingEngine.Send(i, new Endpoint("test", new Destination(TEST_EXCHANGE), serializationFormat: SerializationFormat.Json));
+                    messagingEngine.Send(i, new Endpoint("test", TEST_EXCHANGE, serializationFormat: SerializationFormat.Json));
                 }
                
-                messagingEngine.Subscribe<int>(new Endpoint("test", new Destination(TEST_QUEUE), serializationFormat: SerializationFormat.Json), message =>
+                messagingEngine.Subscribe<int>(new Endpoint("test", TEST_QUEUE, serializationFormat: SerializationFormat.Json), message =>
                 {
                     Console.WriteLine(message+"\n");
                     Thread.Sleep(1000);
@@ -447,7 +447,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
         {
             using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
-                IMessagingSession messagingSession = transport.CreateSession(null, name: null);
+                IMessagingSession messagingSession = transport.CreateSession( null);
                 messagingSession.Subscribe(TEST_QUEUE, (message, acknowledge) => { }, "type1");
                 Assert.That(() => messagingSession.Subscribe(TEST_QUEUE, (message, acknowledge) => { }, "type1"), Throws.TypeOf<InvalidOperationException>());
             }
@@ -458,7 +458,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
         {
             using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
-                IMessagingSession messagingSession = transport.CreateSession(null, name: null);
+                IMessagingSession messagingSession = transport.CreateSession( null);
                 messagingSession.Subscribe(TEST_QUEUE, (message, acknowledge) => { }, "type1");
 
                 Assert.That(() => messagingSession.Subscribe(TEST_QUEUE, (message, acknowledge) => { }, null), Throws.TypeOf<InvalidOperationException>());
@@ -470,7 +470,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
         {
             using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
-                IMessagingSession messagingSession = transport.CreateSession(null, name: null);
+                IMessagingSession messagingSession = transport.CreateSession( null);
 
                 Assert.That(() =>
                 {
@@ -485,7 +485,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
         {
             using (var transport = new RabbitMqTransport(NullLoggerFactory.Instance, HOST, "guest", "guest"))
             {
-                IMessagingSession messagingSession = transport.CreateSession(null, name: null);
+                IMessagingSession messagingSession = transport.CreateSession( null);
 
                 Assert.That(() =>
                 {
@@ -539,7 +539,7 @@ namespace Lykke.Messaging.RabbitMq.Tests
                 {"sendTransport", new TransportInfo("localhost", "guest", "guest", "None", "RabbitMq")}
             });
             var endpoint = new Endpoint("main", new Destination(TEST_EXCHANGE, TEST_QUEUE), true, SerializationFormat.Json);
-            var sendEndpoint = new Endpoint("sendTransport", new Destination(TEST_EXCHANGE, TEST_QUEUE), true, SerializationFormat.Json);
+            var sendEndpoint = new Endpoint("sendTransport", TEST_EXCHANGE, TEST_QUEUE, true, SerializationFormat.Json);
 
 
             using (var me = new MessagingEngine(NullLoggerFactory.Instance, transportInfoResolver, new RabbitMqTransportFactory(NullLoggerFactory.Instance, false)))
