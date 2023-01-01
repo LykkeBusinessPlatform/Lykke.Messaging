@@ -55,33 +55,6 @@ namespace Lykke.Messaging.Tests
         }
 
         [Test]
-        public void MessagingSessionFailureCallbackTest()
-        {
-            var resolver = MockTransportResolver();
-            Action createdSessionOnFailure = () => { Console.WriteLine("!!"); };
-            var transport = new Mock<ITransport>();
-            transport
-                .Setup(t => t.CreateSession(It.IsAny<Action>(), It.IsAny<string>()))
-                .Callback<Action, string>((invocation, displayName) => createdSessionOnFailure = invocation);
-            var factory = new Mock<ITransportFactory>();
-            factory.Setup(f => f.Create(It.IsAny<TransportInfo>(), It.IsAny<Action>())).Returns(transport.Object);
-            factory.Setup(f => f.Name).Returns("Mock");
-            var transportManager = new TransportManager(_loggerFactory, resolver, factory.Object);
-            int i = 0;
-
-            transportManager.GetMessagingSession(
-                new Endpoint(TransportConstants.TRANSPORT_ID3, new Destination("queue")),
-                "test",
-                () => { Interlocked.Increment(ref i); });
-
-            createdSessionOnFailure();
-            createdSessionOnFailure();
-
-            Assert.That(i, Is.Not.EqualTo(0),"Session failure callback was not called");
-            Assert.That(i, Is.EqualTo(1), "Session  failure callback was called twice");
-        }
-
-        [Test]
         public void ConcurrentTransportResolutionTest()
         {
             var resolver = MockTransportResolver();

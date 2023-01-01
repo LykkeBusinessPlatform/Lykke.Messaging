@@ -11,10 +11,10 @@ namespace Lykke.Messaging.Transports
         /// <summary>
         /// Create a session
         /// </summary>
-        /// <param name="onFailure">Failure handler</param>
+        /// <param name="confirmedSending"></param>
         /// <param name="displayName">Session display name</param>
         /// <returns></returns>
-        IMessagingSession CreateSession(Action onFailure, string displayName);
+        IMessagingSession CreateSession(bool confirmedSending = false, string displayName = null);
         
         /// <summary>
         /// Ensures that destination exists
