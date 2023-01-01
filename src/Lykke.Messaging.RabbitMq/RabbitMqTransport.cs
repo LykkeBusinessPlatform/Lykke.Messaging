@@ -78,7 +78,7 @@ namespace Lykke.Messaging.RabbitMq
                 : factories.ToArray();
         }
 
-        private IConnection CreateConnection(bool logConnection, Destination destination)
+        private IConnection CreateConnection(bool logConnection, string displayName)
         {
             Exception exception = null;
 
@@ -86,14 +86,14 @@ namespace Lykke.Messaging.RabbitMq
             {
                 try
                 {
-                    var connection = m_Factories[i].CreateConnection($"{_appName} {_appVersion} {destination}");
+                    var connection = m_Factories[i].CreateConnection(displayName);
                     if (logConnection)
                     {
                         _logger.LogInformation(
-                            "{Method}: Created rmq connection to {HostName} {Destination}.",
+                            "{Method}: Created rmq connection to {HostName} {ConnectionName}.",
                             nameof(CreateConnection),
                             m_Factories[i].Endpoint.HostName,
-                            destination);
+                            displayName);
                     }
 
                     return connection;
@@ -102,11 +102,11 @@ namespace Lykke.Messaging.RabbitMq
                 {
                     _logger.LogError(e,
                         i + 1 != m_Factories.Length
-                            ? "{Method}: Failed to create rmq connection to {HostName} (will try other known hosts) {Destination}"
-                            : "{Method}: Failed to create rmq connection to {HostName} {Destination}",
+                            ? "{Method}: Failed to create rmq connection to {HostName} (will try other known hosts) {ConnectionName}"
+                            : "{Method}: Failed to create rmq connection to {HostName} {ConnectionName}",
                         nameof(CreateConnection),
                         m_Factories[i].Endpoint.HostName,
-                        destination);
+                        displayName);
                     exception = e;
                 }
             }
@@ -127,12 +127,12 @@ namespace Lykke.Messaging.RabbitMq
             }
         }
 
-        public IMessagingSession CreateSession(Action onFailure, bool confirmedSending, Destination destination = default(Destination))
+        public IMessagingSession CreateSession(Action onFailure, bool confirmedSending, string displayName = null)
         {
             if(m_IsDisposed.WaitOne(0))
                 throw new ObjectDisposedException("Transport is disposed");
 
-            var connection = CreateConnection(true, destination);
+            var connection = CreateConnection(true, displayName);
             var session = new RabbitMqSession(
                     _loggerFactory,
                     connection,
@@ -187,9 +187,9 @@ namespace Lykke.Messaging.RabbitMq
             return session;
         }
 
-        public IMessagingSession CreateSession(Action onFailure, Destination destination = default(Destination))
+        public IMessagingSession CreateSession(Action onFailure, string name = null)
         {
-            return CreateSession(onFailure, false, destination);
+            return CreateSession(onFailure, false, name);
         }
 
         public bool VerifyDestination(
@@ -201,7 +201,7 @@ namespace Lykke.Messaging.RabbitMq
             try
             {
                 var publish = PublicationAddress.Parse(destination.Publish) ?? new PublicationAddress("topic", destination.Publish, "");
-                using (IConnection connection = CreateConnection(false, destination))
+                using (IConnection connection = CreateConnection(false, $"{_appName} {_appVersion} {destination}"))
                 {
                     using (IModel channel = connection.CreateModel())
                     {

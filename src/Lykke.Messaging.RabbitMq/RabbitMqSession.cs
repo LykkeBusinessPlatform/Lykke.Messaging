@@ -63,7 +63,7 @@ namespace Lykke.Messaging.RabbitMq
         public Destination CreateTemporaryDestination()
         {
             var queueName = m_Model.QueueDeclare().QueueName;
-            return new Destination { Subscribe = queueName, Publish = new PublicationAddress("direct", "", queueName).ToString() };
+            return new Destination(new PublicationAddress("direct", "", queueName).ToString(), queueName);
         }
 
         public void Send(string destination, BinaryMessage message, int ttl)
