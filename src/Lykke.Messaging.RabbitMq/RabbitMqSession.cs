@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Reactive.Disposables;
 using System.Text;
 using RabbitMQ.Client;
@@ -14,8 +13,7 @@ namespace Lykke.Messaging.RabbitMq
 {
     internal class RabbitMqSession : IMessagingSession
     {
-        private readonly IConnection m_Connection;
-        private readonly IModel m_Model;
+        private readonly IModel _channel;
         private readonly CompositeDisposable m_Subscriptions = new CompositeDisposable();
         private readonly Dictionary<string, DefaultBasicConsumer> m_Consumers = new Dictionary<string, DefaultBasicConsumer>();
         private readonly Action<RabbitMqSession, PublicationAddress, Exception> m_OnSendFail;
@@ -34,10 +32,13 @@ namespace Lykke.Messaging.RabbitMq
             _logger = loggerFactory.CreateLogger<RabbitMqSession>();
 
             m_OnSendFail = onSendFail ?? ((s, d, e) => { });
-            m_Connection = connection;
-            m_Model = m_Connection.CreateModel();
+            
+            if (!connection.IsOpen)
+                throw new InvalidOperationException("An attempt to create channel when connection is closed");
+            _channel = connection.CreateModel();
             if (confirmedSending)
-                m_Model.ConfirmSelect();
+                _channel.ConfirmSelect();
+            
             //NOTE: looks like publish confirm is required for guaranteed delivery
             //smth like:
             //  m_Model.ConfirmSelect();
@@ -47,22 +48,12 @@ namespace Lykke.Messaging.RabbitMq
             //it will wait for ack from server and throw exception if message failed to persist ons srever side (e.g. broker reboot)
             //more info here: http://rianjs.net/2013/12/publisher-confirms-with-rabbitmq-and-c-sharp
 
-            m_Model.BasicQos(0, 300, false);
-            connection.ConnectionShutdown += (connection1, reason) =>
-            {
-                lock (m_Consumers)
-                {
-                    foreach (var consumer in m_Consumers.Values.OfType<IDisposable>())
-                    {
-                        consumer.Dispose();
-                    }
-                }
-            };
+            _channel.BasicQos(0, 300, false);
         }
 
         public Destination CreateTemporaryDestination()
         {
-            var queueName = m_Model.QueueDeclare().QueueName;
+            var queueName = _channel.QueueDeclare().QueueName;
             return new Destination(new PublicationAddress("direct", "", queueName).ToString(), queueName);
         }
 
@@ -84,7 +75,7 @@ namespace Lykke.Messaging.RabbitMq
         {
             try
             {
-                var properties = m_Model.CreateBasicProperties();
+                var properties = _channel.CreateBasicProperties();
 
                 properties.Headers = new Dictionary<string, object>();
                 properties.DeliveryMode = 2; //persistent
@@ -97,16 +88,16 @@ namespace Lykke.Messaging.RabbitMq
                 tuneMessage?.Invoke(properties);
 
                 properties.Headers.Add("initialRoute", destination.ToString());
-                lock (m_Model)
+                lock (_channel)
                 {
-                    m_Model.BasicPublish(destination.ExchangeName, destination.RoutingKey, true, properties, message.Bytes);
+                    _channel.BasicPublish(destination.ExchangeName, destination.RoutingKey, true, properties, message.Bytes);
                     if (m_ConfirmedSending)
-                        m_Model.WaitForConfirmsOrDie();
+                        _channel.WaitForConfirmsOrDie();
                 }
             }
             catch (AlreadyClosedException e)
             {
-                m_OnSendFail(this,destination,e);
+                m_OnSendFail(this, destination, e);
                 throw;
             }
         }
@@ -114,8 +105,8 @@ namespace Lykke.Messaging.RabbitMq
         public RequestHandle SendRequest(string destination, BinaryMessage message, Action<BinaryMessage> callback)
         {
             string queue;
-            lock(m_Model)
-                queue = m_Model.QueueDeclare().QueueName;
+            lock(_channel)
+                queue = _channel.QueueDeclare().QueueName;
             var request = new RequestHandle(callback, () => { }, cb => Subscribe(queue, (binaryMessage, acknowledge) => { 
                 cb(binaryMessage);
                 acknowledge(true);
@@ -200,10 +191,10 @@ namespace Lykke.Messaging.RabbitMq
         {
             if (consumer == null)
             {
-                consumer = new SharedConsumer(_loggerFactory, m_Model);
+                consumer = new SharedConsumer(_loggerFactory, _channel);
                 m_Consumers[destination] = consumer;
-                lock (m_Model)
-                    m_Model.BasicConsume(destination, false, consumer);
+                lock (_channel)
+                    _channel.BasicConsume(destination, false, consumer);
             }
 
             consumer.AddCallback(callback, messageType);
@@ -220,10 +211,10 @@ namespace Lykke.Messaging.RabbitMq
 
         private IDisposable SubscribeNonShared(string destination, Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> callback)
         {
-            var consumer = new Consumer(_loggerFactory, m_Model, callback);
+            var consumer = new Consumer(_loggerFactory, _channel, callback);
 
-            lock (m_Model)
-                m_Model.BasicConsume(destination, false, consumer);
+            lock (_channel)
+                _channel.BasicConsume(destination, false, consumer);
             m_Consumers[destination] = consumer;
             // ReSharper disable ImplicitlyCapturedClosure
             return Disposable.Create(() =>
@@ -241,32 +232,24 @@ namespace Lykke.Messaging.RabbitMq
         {
             lock (m_Consumers)
             {
-                foreach (IDisposable consumer in m_Consumers.Values)
+                foreach (var defaultBasicConsumer in m_Consumers.Values)
                 {
+                    var consumer = (IDisposable)defaultBasicConsumer;
                     consumer.Dispose();
                 }
             }
-            lock (m_Model)
+            
+            lock (_channel)
             {
                 try
                 {
-                    m_Model.Close(200, "Goodbye");
-                    m_Model.Dispose();
+                    _channel.Close(200, "Goodbye");
+                    _channel.Dispose();
                 }
                 catch (Exception e)
                 {
                     _logger.LogError(e, "{Method}: ", nameof(Dispose));
                 }
-            }
-
-            try
-            {
-                m_Connection.Close();
-                m_Connection.Dispose();
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "{Method}: ", nameof(Dispose));
             }
         }
     }
