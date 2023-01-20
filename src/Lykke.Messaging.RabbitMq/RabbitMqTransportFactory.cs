@@ -13,7 +13,7 @@ namespace Lykke.Messaging.RabbitMq
     {
         private readonly ILoggerFactory _loggerFactory;
         private readonly bool m_ShuffleBrokers;
-        private readonly TimeSpan? m_AutomaticRecoveryInterval;
+        private readonly TimeSpan m_AutomaticRecoveryInterval;
         private readonly ConcurrentDictionary<TransportInfo, RabbitMqTransport> _transports = new ConcurrentDictionary<TransportInfo, RabbitMqTransport>();
 
         public string Name => "RabbitMq";
@@ -26,11 +26,11 @@ namespace Lykke.Messaging.RabbitMq
         /// <param name="automaticRecoveryInterval">Interval for automatic recover if set to null automaitc recovery is disabled, 
         /// if set to some value automatic recovery is enabled and NetworkRecoveryInterval of RabbitMQ client is set provided valie
         /// </param>
-        public RabbitMqTransportFactory(ILoggerFactory loggerFactory, bool shuffleBrokers = true, TimeSpan? automaticRecoveryInterval = null)
+        public RabbitMqTransportFactory(ILoggerFactory loggerFactory, TimeSpan automaticRecoveryInterval, bool shuffleBrokers = true)
         {
             _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
-            m_ShuffleBrokers = shuffleBrokers;
             m_AutomaticRecoveryInterval = automaticRecoveryInterval;
+            m_ShuffleBrokers = shuffleBrokers;
         }
 
         public ITransport Create(TransportInfo transportInfo, Action onFailure)
@@ -47,8 +47,8 @@ namespace Lykke.Messaging.RabbitMq
                     brokers,
                     ti.Login,
                     ti.Password,
-                    m_ShuffleBrokers,
-                    m_AutomaticRecoveryInterval
+                    m_AutomaticRecoveryInterval,
+                    m_ShuffleBrokers
                 );
             });
         }

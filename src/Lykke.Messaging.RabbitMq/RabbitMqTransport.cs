@@ -24,7 +24,7 @@ namespace Lykke.Messaging.RabbitMq
         private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger<RabbitMqTransport> _logger;
         
-        private IConnection _connection;
+        private IAutorecoveringConnection _connection;
 
         internal long SessionsCount => m_Sessions.Count;
 
@@ -32,8 +32,9 @@ namespace Lykke.Messaging.RabbitMq
             ILoggerFactory loggerFactory,
             string broker,
             string username,
-            string password)
-            : this(loggerFactory, new[] { broker }, username, password)
+            string password,
+            TimeSpan networkRecoveryInterval)
+            : this(loggerFactory, new[] { broker }, username, password, networkRecoveryInterval)
         {
         }
 
@@ -42,8 +43,8 @@ namespace Lykke.Messaging.RabbitMq
             string[] brokers,
             string username,
             string password,
-            bool shuffleBrokersOnSessionCreate = true,
-            TimeSpan? networkRecoveryInterval = null)
+            TimeSpan networkRecoveryInterval,
+            bool shuffleBrokersOnSessionCreate = true)
         {
             if (brokers == null)
                 throw new ArgumentNullException(nameof(brokers));
@@ -53,9 +54,7 @@ namespace Lykke.Messaging.RabbitMq
             _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
             _logger = loggerFactory.CreateLogger<RabbitMqTransport>();
 
-            if (!networkRecoveryInterval.HasValue)
-                throw new ArgumentException("Only autorecovering connections are supported. Please, specify recovery interval");
-            m_NetworkRecoveryInterval = networkRecoveryInterval.Value;
+            m_NetworkRecoveryInterval = networkRecoveryInterval;
 
             var factories = brokers.Select(brokerName =>
             {
@@ -64,7 +63,8 @@ namespace Lykke.Messaging.RabbitMq
                     UserName = username,
                     Password = password,
                     AutomaticRecoveryEnabled = true,
-                    NetworkRecoveryInterval = m_NetworkRecoveryInterval
+                    NetworkRecoveryInterval = m_NetworkRecoveryInterval,
+                    TopologyRecoveryEnabled = true
                 };
 
                 if (Uri.TryCreate(brokerName, UriKind.Absolute, out var uri))
@@ -80,7 +80,7 @@ namespace Lykke.Messaging.RabbitMq
                 : factories.ToArray();
         }
 
-        private IConnection CreateConnection(string displayName)
+        private IAutorecoveringConnection CreateConnection(string displayName)
         {
             Exception exception = null;
 
@@ -88,7 +88,7 @@ namespace Lykke.Messaging.RabbitMq
             {
                 try
                 {
-                    var connection = m_Factories[i].CreateConnection(displayName);
+                    var connection = m_Factories[i].CreateConnection(displayName) as IAutorecoveringConnection;
                     _logger.LogInformation(
                         "{Method}: Created rmq connection to {HostName} {ConnectionName}.",
                         nameof(CreateConnection),
@@ -147,25 +147,7 @@ namespace Lykke.Messaging.RabbitMq
 
             _connection ??= CreateConnection(displayName);
 
-            var session = new RabbitMqSession(
-                    _loggerFactory,
-                    _connection,
-                    confirmedSending,
-                    (rabbitMqSession, dst, exception) =>
-                    {
-                        // @atarutin TODO: check implementation, taking into account autorecovering connection
-                        // so this approach might be outdated
-                        lock (m_Sessions)
-                        {
-                            m_Sessions.Remove(rabbitMqSession);
-                            rabbitMqSession.Dispose();
-                            _logger.LogError(exception,
-                                "{Method}: Failed to send message to destination '{Destination}' broker '{HostName}'. Treating session as broken.",
-                                nameof(CreateSession),
-                                dst,
-                                _connection.Endpoint.HostName);
-                        }
-                    });
+            var session = new RabbitMqSession(_loggerFactory, _connection, confirmedSending);
             
             lock (m_Sessions)
             {

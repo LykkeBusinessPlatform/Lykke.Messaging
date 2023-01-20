@@ -8,6 +8,8 @@ using RabbitMQ.Client.Exceptions;
 using Lykke.Messaging.Contract;
 using Lykke.Messaging.Transports;
 using Microsoft.Extensions.Logging;
+using Polly;
+using Polly.Retry;
 
 namespace Lykke.Messaging.RabbitMq
 {
@@ -16,28 +18,50 @@ namespace Lykke.Messaging.RabbitMq
         private readonly IModel _channel;
         private readonly CompositeDisposable m_Subscriptions = new CompositeDisposable();
         private readonly Dictionary<string, DefaultBasicConsumer> m_Consumers = new Dictionary<string, DefaultBasicConsumer>();
-        private readonly Action<RabbitMqSession, PublicationAddress, Exception> m_OnSendFail;
+        private readonly RetryPolicy _retryPolicy;
 
-        private bool m_ConfirmedSending = false;
+        private readonly bool m_ConfirmedSending = false;
         private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger<RabbitMqSession> _logger;
 
         public RabbitMqSession(
             ILoggerFactory loggerFactory,
-            IConnection connection,
-            bool confirmedSending = false,
-            Action<RabbitMqSession, PublicationAddress, Exception> onSendFail = null)
+            IAutorecoveringConnection connection,
+            bool confirmedSending = false)
         {
             _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
             _logger = loggerFactory.CreateLogger<RabbitMqSession>();
-
-            m_OnSendFail = onSendFail ?? ((s, d, e) => { });
             
-            if (!connection.IsOpen)
-                throw new InvalidOperationException("An attempt to create channel when connection is closed");
-            _channel = connection.CreateModel();
+            // move to retry policy provider
+            _retryPolicy = Policy
+                .Handle<OperationInterruptedException>()
+                .Or<BrokerUnreachableException>()
+                .WaitAndRetryForever(attempt => TimeSpan.FromSeconds(Math.Min(Math.Pow(2, attempt), 30)),
+                    (exception, retryCount, timeSpan) =>
+                    {
+                        if (exception is OperationInterruptedException operationInterruptedException)
+                        {
+                            _logger.LogWarning(
+                                "The operation was interrupted with reason {ReasonCode}:{ReasonText}. Trying to reconnect for the {RetryCount} time in {Period}",
+                                operationInterruptedException.ShutdownReason.ReplyCode,
+                                operationInterruptedException.ShutdownReason.ReplyText,
+                                retryCount,
+                                timeSpan);
+                        }
+                        
+                        if (exception is BrokerUnreachableException)
+                        {
+                            _logger.LogWarning(
+                                "The broker is unreachable. Trying to reconnect for the {RetryCount} time in {Period}",
+                                retryCount,
+                                timeSpan);
+                        }
+                    });
+            
+            // TODO: bad idea to init channel in ctor
+            _channel = _retryPolicy.Execute(connection.CreateModel);
             if (confirmedSending)
-                _channel.ConfirmSelect();
+                _retryPolicy.Execute(() => _channel.ConfirmSelect());
             
             //NOTE: looks like publish confirm is required for guaranteed delivery
             //smth like:
@@ -48,12 +72,12 @@ namespace Lykke.Messaging.RabbitMq
             //it will wait for ack from server and throw exception if message failed to persist ons srever side (e.g. broker reboot)
             //more info here: http://rianjs.net/2013/12/publisher-confirms-with-rabbitmq-and-c-sharp
 
-            _channel.BasicQos(0, 300, false);
+            _retryPolicy.Execute(() => _channel.BasicQos(0, 300, false));
         }
 
         public Destination CreateTemporaryDestination()
         {
-            var queueName = _channel.QueueDeclare().QueueName;
+            var queueName = _retryPolicy.Execute(() => _channel.QueueDeclare()).QueueName;
             return new Destination(new PublicationAddress("direct", "", queueName).ToString(), queueName);
         }
 
@@ -71,42 +95,47 @@ namespace Lykke.Messaging.RabbitMq
             Send(publicationAddress, message, tuneMessage);
         }
 
-        private void Send(PublicationAddress destination, BinaryMessage message, Action<IBasicProperties> tuneMessage = null)
+        private void Send(PublicationAddress destination,
+            BinaryMessage message,
+            Action<IBasicProperties> tuneMessage = null)
         {
-            try
+            var properties = _channel.CreateBasicProperties();
+
+            properties.Headers = new Dictionary<string, object>();
+            properties.DeliveryMode = 2; //persistent
+            foreach (var header in message.Headers)
             {
-                var properties = _channel.CreateBasicProperties();
+                properties.Headers[header.Key] = header.Value;
+            }
 
-                properties.Headers = new Dictionary<string, object>();
-                properties.DeliveryMode = 2; //persistent
-                foreach (var header in message.Headers)
-                {
-                    properties.Headers[header.Key] = header.Value;
-                }
-                if (message.Type != null)
-                    properties.Type = message.Type;
-                tuneMessage?.Invoke(properties);
+            if (message.Type != null)
+                properties.Type = message.Type;
+            tuneMessage?.Invoke(properties);
 
-                properties.Headers.Add("initialRoute", destination.ToString());
-                lock (_channel)
+            properties.Headers.Add("initialRoute", destination.ToString());
+            lock (_channel)
+            {
+                _retryPolicy.Execute(() =>
                 {
-                    _channel.BasicPublish(destination.ExchangeName, destination.RoutingKey, true, properties, message.Bytes);
+                    _channel.BasicPublish(destination.ExchangeName,
+                        destination.RoutingKey,
+                        true,
+                        properties,
+                        message.Bytes);
                     if (m_ConfirmedSending)
                         _channel.WaitForConfirmsOrDie();
-                }
-            }
-            catch (AlreadyClosedException e)
-            {
-                m_OnSendFail(this, destination, e);
-                throw;
+                });
             }
         }
 
         public RequestHandle SendRequest(string destination, BinaryMessage message, Action<BinaryMessage> callback)
         {
             string queue;
-            lock(_channel)
-                queue = _channel.QueueDeclare().QueueName;
+            lock (_channel)
+            {
+                queue = _retryPolicy.Execute(() => _channel.QueueDeclare()).QueueName;
+            }
+
             var request = new RequestHandle(callback, () => { }, cb => Subscribe(queue, (binaryMessage, acknowledge) => { 
                 cb(binaryMessage);
                 acknowledge(true);
@@ -194,7 +223,9 @@ namespace Lykke.Messaging.RabbitMq
                 consumer = new SharedConsumer(_loggerFactory, _channel);
                 m_Consumers[destination] = consumer;
                 lock (_channel)
-                    _channel.BasicConsume(destination, false, consumer);
+                {
+                    _retryPolicy.Execute(() => _channel.BasicConsume(destination, false, consumer));
+                }
             }
 
             consumer.AddCallback(callback, messageType);
@@ -214,7 +245,10 @@ namespace Lykke.Messaging.RabbitMq
             var consumer = new Consumer(_loggerFactory, _channel, callback);
 
             lock (_channel)
-                _channel.BasicConsume(destination, false, consumer);
+            {
+                _retryPolicy.Execute(() => _channel.BasicConsume(destination, false, consumer));
+            }
+
             m_Consumers[destination] = consumer;
             // ReSharper disable ImplicitlyCapturedClosure
             return Disposable.Create(() =>
@@ -232,10 +266,10 @@ namespace Lykke.Messaging.RabbitMq
         {
             lock (m_Consumers)
             {
-                foreach (var defaultBasicConsumer in m_Consumers.Values)
+                foreach (var c in m_Consumers.Values)
                 {
-                    var consumer = (IDisposable)defaultBasicConsumer;
-                    consumer.Dispose();
+                    if (c is IDisposable consumer)
+                        consumer.Dispose();
                 }
             }
             
