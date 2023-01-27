@@ -4,7 +4,8 @@ namespace Lykke.Messaging.RabbitMq.Retry
 {
     public class RabbitMqRetryPolicyOptions
     {
-        public TimeSpan[] InitialConnectionRetryIntervals { get; set; }
-        public TimeSpan[] RegularRetryIntervals { get; set; }
+        public const string RabbitMqRetryPolicyOptionsName = "RabbitMqRetryPolicy";
+        public TimeSpan[] InitialConnectionSleepIntervals { get; set; }
+        public TimeSpan[] RegularSleepIntervals { get; set; }
     }
 }

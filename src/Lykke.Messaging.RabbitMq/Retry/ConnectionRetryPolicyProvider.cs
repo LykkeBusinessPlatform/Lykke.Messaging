@@ -7,7 +7,7 @@ namespace Lykke.Messaging.RabbitMq.Retry
 {
     /// <summary>
     /// Provides retry policies for RabbitMQ transport with given configuration
-    /// of retry intervals. For default retry intervals retry policies are reused. 
+    /// of retry intervals. Retry policies are reused as they are thread safe. 
     /// </summary>
     public sealed class ConnectionRetryPolicyProvider : IRetryPolicyProvider
     {
@@ -23,10 +23,14 @@ namespace Lykke.Messaging.RabbitMq.Retry
             _policyOptions = options.Value;
         }
 
-        private static RetryPolicy CreatePolicy(Func<int, Func<int, TimeSpan>, RetryPolicy> factoryMethod,
-            TimeSpan[] retryIntervals)
+        private static RetryPolicy CreatePolicy(RetryPolicyFactoryMethod factoryMethod,
+            TimeSpan[] sleepIntervals)
         {
-            return factoryMethod(retryIntervals.Length, i => retryIntervals[i - 1]);
+            var maxRetryCount = sleepIntervals.Length;
+            return factoryMethod(maxRetryCount, SleepDurations);
+            
+            // todo: unit test this
+            TimeSpan SleepDurations(int i) => sleepIntervals[i - 1];
         }
 
         /// <summary>
@@ -39,7 +43,7 @@ namespace Lykke.Messaging.RabbitMq.Retry
             get
             {
                 _initialConnectionPolicy ??= CreatePolicy(_retryPolicyFactory.InitialConnectionPolicy,
-                    _policyOptions.InitialConnectionRetryIntervals);
+                    _policyOptions.InitialConnectionSleepIntervals);
                 return _initialConnectionPolicy;
             }
         }
@@ -54,7 +58,7 @@ namespace Lykke.Messaging.RabbitMq.Retry
             get
             {
                 _regularPolicy ??= CreatePolicy(_retryPolicyFactory.RegularPolicy,
-                    _policyOptions.RegularRetryIntervals);
+                    _policyOptions.RegularSleepIntervals);
                 return _regularPolicy;
             }
         }
