@@ -3,14 +3,14 @@ using Polly.Retry;
 
 namespace Lykke.Messaging.RabbitMq.Retry
 {
-    internal interface IRetryPolicyFactory
+    public interface IRetryPolicyFactory
     {
         private const int DefaultRetryCount = 10;
 
-        IRetryPolicy InitialConnectionPolicy(int retryCount = DefaultRetryCount,
+        RetryPolicy InitialConnectionPolicy(int retryCount = DefaultRetryCount,
             Func<int, TimeSpan> sleepDurationProvider = null);
 
-        IRetryPolicy PublishPolicy(int retryCount = DefaultRetryCount,
+        RetryPolicy RegularPolicy(int retryCount = DefaultRetryCount,
             Func<int, TimeSpan> sleepDurationProvider = null);
     }
 }

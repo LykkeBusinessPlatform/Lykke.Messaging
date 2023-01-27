@@ -9,7 +9,7 @@ namespace Lykke.Messaging.RabbitMq.Retry
     /// <summary>
     /// Creates retry policies for RabbitMQ transport
     /// </summary>
-    internal class ConnectionRetryPolicyFactory : IRetryPolicyFactory
+    public sealed class ConnectionRetryPolicyFactory : IRetryPolicyFactory
     {
         private readonly ILoggerFactory _loggerFactory;
         
@@ -27,13 +27,13 @@ namespace Lykke.Messaging.RabbitMq.Retry
         /// sleep duration between retries. Defaults to linear backoff with
         /// 2 seconds interval</param>
         /// <returns></returns>
-        public IRetryPolicy InitialConnectionPolicy(int retryCount,
+        public RetryPolicy InitialConnectionPolicy(int retryCount,
             Func<int, TimeSpan> sleepDurationProvider)
         {
             var logger = _loggerFactory.CreateLogger("RabbitMqInitialConnectionRetryPolicy");
             
             sleepDurationProvider ??= LinearBackoffSleepDurationProvider;
-
+            
             return Policy
                 .Handle<BrokerUnreachableException>()
                 .WaitAndRetry(retryCount, sleepDurationProvider,
@@ -47,14 +47,13 @@ namespace Lykke.Messaging.RabbitMq.Retry
         }
 
         /// <summary>
-        /// Creates a retry policy for the operation to publish a message to
-        /// RabbitMQ server
+        /// Creates a retry policy for the regular operations upon RabbitMQ server
         /// </summary>
         /// <param name="retryCount">The number of maximum retries</param>
         /// <param name="sleepDurationProvider">The function to calculate the
         /// sleep duration between retries. Defaults to exponential backoff.</param>
         /// <returns></returns>
-        public IRetryPolicy PublishPolicy(int retryCount,
+        public RetryPolicy RegularPolicy(int retryCount,
             Func<int, TimeSpan> sleepDurationProvider)
         {
             var logger = _loggerFactory.CreateLogger("RabbitMqPublishRetryPolicy");
