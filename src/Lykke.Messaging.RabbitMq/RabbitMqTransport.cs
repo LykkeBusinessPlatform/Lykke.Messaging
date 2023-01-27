@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Lykke.Messaging.Contract;
+using Lykke.Messaging.RabbitMq.Retry;
 using Lykke.Messaging.Transports;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.PlatformAbstractions;
@@ -23,6 +24,7 @@ namespace Lykke.Messaging.RabbitMq
         private readonly string _appVersion = PlatformServices.Default.Application.ApplicationVersion;
         private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger<RabbitMqTransport> _logger;
+        private readonly IRetryPolicyProvider _retryPolicyProvider;
         
         private IAutorecoveringConnection _connection;
 
@@ -30,16 +32,18 @@ namespace Lykke.Messaging.RabbitMq
 
         public RabbitMqTransport(
             ILoggerFactory loggerFactory,
+            IRetryPolicyProvider retryPolicyProvider,
             string broker,
             string username,
             string password,
             TimeSpan networkRecoveryInterval)
-            : this(loggerFactory, new[] { broker }, username, password, networkRecoveryInterval)
+            : this(loggerFactory, retryPolicyProvider, new[] { broker }, username, password, networkRecoveryInterval)
         {
         }
 
         public RabbitMqTransport(
             ILoggerFactory loggerFactory,
+            IRetryPolicyProvider retryPolicyProvider,
             string[] brokers,
             string username,
             string password,
@@ -52,6 +56,7 @@ namespace Lykke.Messaging.RabbitMq
                 throw new ArgumentException("brokers list is empty", nameof(brokers));
 
             _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
+            _retryPolicyProvider = retryPolicyProvider ?? throw new ArgumentNullException(nameof(retryPolicyProvider));
             _logger = loggerFactory.CreateLogger<RabbitMqTransport>();
 
             m_NetworkRecoveryInterval = networkRecoveryInterval;
@@ -88,7 +93,9 @@ namespace Lykke.Messaging.RabbitMq
             {
                 try
                 {
-                    var connection = m_Factories[i].CreateConnection(displayName) as IAutorecoveringConnection;
+                    var connection = _retryPolicyProvider.InitialConnectionPolicy.Execute(() =>
+                        m_Factories[i].CreateConnection(displayName) as IAutorecoveringConnection);
+                    
                     _logger.LogInformation(
                         "{Method}: Created rmq connection to {HostName} {ConnectionName}.",
                         nameof(CreateConnection),
@@ -110,7 +117,7 @@ namespace Lykke.Messaging.RabbitMq
                 }
                 catch (Exception e)
                 {
-                    _logger.LogError(e,
+                    _logger.LogCritical(e,
                         i + 1 != m_Factories.Length
                             ? "{Method}: Failed to create rmq connection to {HostName} (will try other known hosts) {ConnectionName}"
                             : "{Method}: Failed to create rmq connection to {HostName} {ConnectionName}",
@@ -147,7 +154,7 @@ namespace Lykke.Messaging.RabbitMq
 
             _connection ??= CreateConnection(displayName);
 
-            var session = new RabbitMqSession(_loggerFactory, _connection, confirmedSending);
+            var session = new RabbitMqSession(_loggerFactory, _connection, _retryPolicyProvider, confirmedSending);
             
             lock (m_Sessions)
             {

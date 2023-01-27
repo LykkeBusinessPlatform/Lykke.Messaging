@@ -1,5 +1,6 @@
 using System;
 using Microsoft.Extensions.Options;
+using Polly;
 using Polly.Retry;
 
 namespace Lykke.Messaging.RabbitMq.Retry
@@ -33,7 +34,7 @@ namespace Lykke.Messaging.RabbitMq.Retry
         /// to RabbitMQ server with default retry intervals
         /// </summary>
         /// <returns></returns>
-        public RetryPolicy InitialConnectionPolicy
+        public Policy InitialConnectionPolicy
         {
             get
             {
@@ -48,7 +49,7 @@ namespace Lykke.Messaging.RabbitMq.Retry
         /// to RabbitMQ server with default retry intervals 
         /// </summary>
         /// <returns></returns>
-        public RetryPolicy RegularPolicy
+        public Policy RegularPolicy
         {
             get
             {

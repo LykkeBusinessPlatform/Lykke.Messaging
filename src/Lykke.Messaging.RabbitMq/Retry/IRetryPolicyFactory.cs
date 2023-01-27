@@ -9,7 +9,7 @@ namespace Lykke.Messaging.RabbitMq.Retry
 
         RetryPolicy InitialConnectionPolicy(int retryCount = DefaultRetryCount,
             Func<int, TimeSpan> sleepDurationProvider = null);
-
+        
         RetryPolicy RegularPolicy(int retryCount = DefaultRetryCount,
             Func<int, TimeSpan> sleepDurationProvider = null);
     }

@@ -56,7 +56,7 @@ namespace Lykke.Messaging.RabbitMq.Retry
         public RetryPolicy RegularPolicy(int retryCount,
             Func<int, TimeSpan> sleepDurationProvider)
         {
-            var logger = _loggerFactory.CreateLogger("RabbitMqPublishRetryPolicy");
+            var logger = _loggerFactory.CreateLogger("RabbitMqRegularRetryPolicy");
             
             sleepDurationProvider ??= ExponentialBackoffSleepDurationProvider;
 

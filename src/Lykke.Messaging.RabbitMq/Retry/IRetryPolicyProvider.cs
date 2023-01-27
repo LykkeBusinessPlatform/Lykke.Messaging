@@ -1,10 +1,10 @@
-using Polly.Retry;
+using Polly;
 
 namespace Lykke.Messaging.RabbitMq.Retry
 {
     public interface IRetryPolicyProvider
     {
-        RetryPolicy InitialConnectionPolicy { get; }
-        RetryPolicy RegularPolicy { get; }
+        Policy InitialConnectionPolicy { get; }
+        Policy RegularPolicy { get; }
     }
 }
