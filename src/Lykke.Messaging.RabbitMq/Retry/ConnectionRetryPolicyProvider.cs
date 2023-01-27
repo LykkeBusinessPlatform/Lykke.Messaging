@@ -1,4 +1,5 @@
 using System;
+using Microsoft.Extensions.Options;
 using Polly.Retry;
 
 namespace Lykke.Messaging.RabbitMq.Retry
@@ -10,24 +11,21 @@ namespace Lykke.Messaging.RabbitMq.Retry
     public sealed class ConnectionRetryPolicyProvider : IRetryPolicyProvider
     {
         private readonly IRetryPolicyFactory _retryPolicyFactory;
+        private readonly RabbitMqRetryPolicyOptions _policyOptions;
+        private RetryPolicy _initialConnectionPolicy;
+        private RetryPolicy _regularPolicy;
 
         public ConnectionRetryPolicyProvider(IRetryPolicyFactory retryPolicyFactory,
-            RetryConfiguration initialConnectionConfiguration,
-            RetryConfiguration regularConfiguration)
+            IOptions<RabbitMqRetryPolicyOptions> options)
         {
             _retryPolicyFactory = retryPolicyFactory;
-
-            InitialConnectionPolicy =
-                CreatePolicy(_retryPolicyFactory.InitialConnectionPolicy, initialConnectionConfiguration);
-            RegularPolicy = 
-                CreatePolicy(_retryPolicyFactory.RegularPolicy, regularConfiguration);
+            _policyOptions = options.Value;
         }
 
         private static RetryPolicy CreatePolicy(Func<int, Func<int, TimeSpan>, RetryPolicy> factoryMethod,
-            RetryConfiguration configuration)
+            TimeSpan[] retryIntervals)
         {
-            var (retryCount, sleepDurationProvider) = configuration.ToPolicyParams();
-            return factoryMethod(retryCount, sleepDurationProvider);
+            return factoryMethod(retryIntervals.Length, i => retryIntervals[i - 1]);
         }
 
         /// <summary>
@@ -35,13 +33,29 @@ namespace Lykke.Messaging.RabbitMq.Retry
         /// to RabbitMQ server with default retry intervals
         /// </summary>
         /// <returns></returns>
-        public RetryPolicy InitialConnectionPolicy { get; }
+        public RetryPolicy InitialConnectionPolicy
+        {
+            get
+            {
+                _initialConnectionPolicy ??= CreatePolicy(_retryPolicyFactory.InitialConnectionPolicy,
+                    _policyOptions.InitialConnectionRetryIntervals);
+                return _initialConnectionPolicy;
+            }
+        }
 
         /// <summary>
         /// Creates a retry policy for the operation to publish a message
         /// to RabbitMQ server with default retry intervals 
         /// </summary>
         /// <returns></returns>
-        public RetryPolicy RegularPolicy { get; }
+        public RetryPolicy RegularPolicy
+        {
+            get
+            {
+                _regularPolicy ??= CreatePolicy(_retryPolicyFactory.RegularPolicy,
+                    _policyOptions.RegularRetryIntervals);
+                return _regularPolicy;
+            }
+        }
     }
 }
