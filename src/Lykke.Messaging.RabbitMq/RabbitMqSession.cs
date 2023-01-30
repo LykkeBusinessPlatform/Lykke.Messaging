@@ -64,14 +64,14 @@ namespace Lykke.Messaging.RabbitMq
             }
             catch (Exception e)
             {
-                var counterActions = e.DecideOnFailureActions();
-                if (counterActions.HasFlag(FailureActions.CloseChannel))
+                var failureActions = e.DecideOnFailureActions();
+                if (failureActions.HasFlag(FailureActions.CloseChannel))
                     CloseChannel();
                 
-                if (counterActions.HasFlag(FailureActions.Throw))
+                if (failureActions.HasFlag(FailureActions.Throw))
                     throw;
 
-                if (counterActions.HasFlag(FailureActions.Retry))
+                if (failureActions.HasFlag(FailureActions.Retry))
                     throw new RecoverableFailureException(e);
 
                 throw new InvalidOperationException(
