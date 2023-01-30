@@ -1,4 +1,5 @@
 using System;
+using Lykke.Messaging.RabbitMq.Exceptions;
 using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Retry;
@@ -61,23 +62,12 @@ namespace Lykke.Messaging.RabbitMq.Retry
             sleepDurationProvider ??= ExponentialBackoffSleepDurationProvider;
 
             return Policy
-                .Handle<OperationInterruptedException>()
+                .Handle<RecoverableFailureException>()
                 .WaitAndRetry(retryCount, sleepDurationProvider,
                     (exception, span, rc, ctx) =>
                     {
-                        var operationInterruptedException = exception as OperationInterruptedException;
-
-                        if (operationInterruptedException == null)
-                        {
-                            logger.LogCritical(exception, "Unexpected exception type");
-                            return;
-                        }
-                        
                         logger.LogWarning(
-                            "The operation was interrupted with reason {ReasonCode}:{ReasonText}. " +
                             "Trying to reconnect for the {RetryCount} time in {Period}",
-                            operationInterruptedException.ShutdownReason.ReplyCode,
-                            operationInterruptedException.ShutdownReason.ReplyText,
                             rc,
                             span);
                     });
