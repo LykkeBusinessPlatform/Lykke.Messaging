@@ -8,6 +8,10 @@
 
   <ItemGroup>
     <PackageReference Include="Castle.Windsor" Version="4.1.1" />
+    <PackageReference Include="coverlet.collector" Version="3.2.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="LykkeBiz.Logs" Version="9.1.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.3.1" />
     <PackageReference Include="MSTest.TestAdapter" Version="2.2.10" />
