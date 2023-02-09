@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Lykke.Messaging.Contract;
+using Lykke.Messaging.RabbitMq.Retry;
 using Lykke.Messaging.Transports;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.PlatformAbstractions;
@@ -14,34 +15,40 @@ namespace Lykke.Messaging.RabbitMq
     internal class RabbitMqTransport : ITransport
     {
         private static readonly Random m_Random = new Random((int)DateTime.UtcNow.Ticks & 0x0000FFFF);
-
-        private readonly TimeSpan? m_NetworkRecoveryInterval;
+        private readonly TimeSpan m_NetworkRecoveryInterval;
         private readonly ConnectionFactory[] m_Factories;
+        // todo: probably, replace with another collection
         private readonly List<RabbitMqSession> m_Sessions = new List<RabbitMqSession>();
         private readonly ManualResetEvent m_IsDisposed = new ManualResetEvent(false);
         private readonly string _appName = PlatformServices.Default.Application.ApplicationName;
         private readonly string _appVersion = PlatformServices.Default.Application.ApplicationVersion;
         private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger<RabbitMqTransport> _logger;
+        private readonly IRetryPolicyProvider _retryPolicyProvider;
+        
+        private IAutorecoveringConnection _connection;
 
         internal long SessionsCount => m_Sessions.Count;
 
         public RabbitMqTransport(
             ILoggerFactory loggerFactory,
+            IRetryPolicyProvider retryPolicyProvider,
             string broker,
             string username,
-            string password)
-            : this(loggerFactory, new[] { broker }, username, password)
+            string password,
+            TimeSpan networkRecoveryInterval)
+            : this(loggerFactory, retryPolicyProvider, new[] { broker }, username, password, networkRecoveryInterval)
         {
         }
 
         public RabbitMqTransport(
             ILoggerFactory loggerFactory,
+            IRetryPolicyProvider retryPolicyProvider,
             string[] brokers,
             string username,
             string password,
-            bool shuffleBrokersOnSessionCreate = true,
-            TimeSpan? networkRecoveryInterval = null)
+            TimeSpan networkRecoveryInterval,
+            bool shuffleBrokersOnSessionCreate = true)
         {
             if (brokers == null)
                 throw new ArgumentNullException(nameof(brokers));
@@ -49,6 +56,7 @@ namespace Lykke.Messaging.RabbitMq
                 throw new ArgumentException("brokers list is empty", nameof(brokers));
 
             _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
+            _retryPolicyProvider = retryPolicyProvider ?? throw new ArgumentNullException(nameof(retryPolicyProvider));
             _logger = loggerFactory.CreateLogger<RabbitMqTransport>();
 
             m_NetworkRecoveryInterval = networkRecoveryInterval;
@@ -59,17 +67,16 @@ namespace Lykke.Messaging.RabbitMq
                 {
                     UserName = username,
                     Password = password,
-                    AutomaticRecoveryEnabled = m_NetworkRecoveryInterval.HasValue
+                    AutomaticRecoveryEnabled = true,
+                    NetworkRecoveryInterval = m_NetworkRecoveryInterval,
+                    TopologyRecoveryEnabled = true
                 };
-
-                if (m_NetworkRecoveryInterval.HasValue)
-                    f.NetworkRecoveryInterval = m_NetworkRecoveryInterval.Value; //it's default value
 
                 if (Uri.TryCreate(brokerName, UriKind.Absolute, out var uri))
                     f.Uri = uri;
                 else
                     f.HostName = brokerName;
-
+                
                 return f;
             });
 
@@ -78,7 +85,7 @@ namespace Lykke.Messaging.RabbitMq
                 : factories.ToArray();
         }
 
-        private IConnection CreateConnection(bool logConnection, Destination destination)
+        private IAutorecoveringConnection CreateConnection(string displayName)
         {
             Exception exception = null;
 
@@ -86,30 +93,41 @@ namespace Lykke.Messaging.RabbitMq
             {
                 try
                 {
-                    var connection = m_Factories[i].CreateConnection($"{_appName} {_appVersion} {destination}");
-                    if (logConnection)
+                    var connection = _retryPolicyProvider.InitialConnectionPolicy.Execute(() =>
+                        m_Factories[i].CreateConnection(displayName) as IAutorecoveringConnection);
+                    
+                    _logger.LogInformation(
+                        "{Method}: Created rmq connection to {HostName} {ConnectionName}.",
+                        nameof(CreateConnection),
+                        m_Factories[i].Endpoint.HostName,
+                        displayName);
+                    
+                    connection.ConnectionShutdown += (c, reason) =>
                     {
-                        _logger.LogInformation(
-                            "{Method}: Created rmq connection to {HostName} {Destination}.",
-                            nameof(CreateConnection),
-                            m_Factories[i].Endpoint.HostName,
-                            destination);
-                    }
+                        if ((reason.Initiator != ShutdownInitiator.Application || reason.ReplyCode != 200))
+                        {
+                            _logger.LogWarning(
+                                "ConnectionShutdown: Rmq session to {HostName} is broken. Reason: {Reason}. Auto-recovery is in progress.",
+                                _connection.Endpoint.HostName,
+                                reason);
+                        }
+                    };
 
                     return connection;
                 }
                 catch (Exception e)
                 {
-                    _logger.LogError(e,
+                    _logger.LogCritical(e,
                         i + 1 != m_Factories.Length
-                            ? "{Method}: Failed to create rmq connection to {HostName} (will try other known hosts) {Destination}"
-                            : "{Method}: Failed to create rmq connection to {HostName} {Destination}",
+                            ? "{Method}: Failed to create rmq connection to {HostName} (will try other known hosts) {ConnectionName}"
+                            : "{Method}: Failed to create rmq connection to {HostName} {ConnectionName}",
                         nameof(CreateConnection),
                         m_Factories[i].Endpoint.HostName,
-                        destination);
+                        displayName);
                     exception = e;
                 }
             }
+            
             throw new TransportException("Failed to create rmq connection", exception);
         }
 
@@ -125,71 +143,25 @@ namespace Lykke.Messaging.RabbitMq
             {
                 session.Dispose();
             }
+            
+            _connection?.Dispose();
         }
 
-        public IMessagingSession CreateSession(Action onFailure, bool confirmedSending, Destination destination = default(Destination))
+        public IMessagingSession CreateSession(bool confirmedSending = false, string displayName = null)
         {
             if(m_IsDisposed.WaitOne(0))
                 throw new ObjectDisposedException("Transport is disposed");
 
-            var connection = CreateConnection(true, destination);
-            var session = new RabbitMqSession(
-                    _loggerFactory,
-                    connection,
-                    confirmedSending,
-                    (rabbitMqSession, dst, exception) =>
-                    {
-                        lock (m_Sessions)
-                        {
-                            m_Sessions.Remove(rabbitMqSession);
-                            _logger.LogError(exception,
-                                "{Method}: Failed to send message to destination '{Destination}' broker '{HostName}'. Treating session as broken.",
-                                nameof(CreateSession),
-                                dst,
-                                connection.Endpoint.HostName);
-                        }
-                    });
+            _connection ??= CreateConnection(displayName);
 
-            connection.ConnectionShutdown += (c, reason) =>
-                {
-                    lock (m_Sessions)
-                    {
-                        m_Sessions.Remove(session);
-                    }
-
-                    if ((reason.Initiator != ShutdownInitiator.Application || reason.ReplyCode != 200) && onFailure != null)
-                    {
-                        _logger.LogWarning(
-                            "ConnectionShutdown: Rmq session to {HostName} is broken. Reason: {Reason}",
-                            connection.Endpoint.HostName,
-                            reason);
-
-                        // If m_NetworkRecoveryInterval is null this
-                        //         means that native Rabbit MQ 
-                        //         automaic recovery is disabled
-                        //         and processing group recovery mechanism must be enabled
-                        // If m_NetworkRecoveryInterval is set to some value this 
-                        //         means that native Rabbit MQ 
-                        //         automaic recovery is enabled 
-                        //         and there is not need to use processing group recovery mechanism
-                        if (!m_NetworkRecoveryInterval.HasValue) 
-                        {
-                            onFailure();
-                        }
-                    }
-                };
-
+            var session = new RabbitMqSession(_loggerFactory, _connection, _retryPolicyProvider, confirmedSending);
+            
             lock (m_Sessions)
             {
                 m_Sessions.Add(session);
             }
 
             return session;
-        }
-
-        public IMessagingSession CreateSession(Action onFailure, Destination destination = default(Destination))
-        {
-            return CreateSession(onFailure, false, destination);
         }
 
         public bool VerifyDestination(
@@ -200,37 +172,34 @@ namespace Lykke.Messaging.RabbitMq
         {
             try
             {
-                var publish = PublicationAddress.Parse(destination.Publish) ?? new PublicationAddress("topic", destination.Publish, "");
-                using (IConnection connection = CreateConnection(false, destination))
+                var publish = PublicationAddress.Parse(destination.Publish) ??
+                              new PublicationAddress("topic", destination.Publish, "");
+                _connection ??= CreateConnection(displayName: $"{_appName} {_appVersion}");
+                using var channel = _connection.CreateModel();
+                if (publish.ExchangeName == "" && publish.ExchangeType.ToLower() == "direct")
                 {
-                    using (IModel channel = connection.CreateModel())
-                    {
-                        if (publish.ExchangeName == "" && publish.ExchangeType.ToLower() == "direct")
-                        {
-                            //default exchange should not be verified since it always exists and publication to it is always possible
-                        }
-                        else
-                        {
-                            if (configureIfRequired)
-                                channel.ExchangeDeclare(publish.ExchangeName, publish.ExchangeType, true);
-                            else
-                                channel.ExchangeDeclarePassive(publish.ExchangeName);
-                        }
+                    //default exchange should not be verified since it always exists and publication to it is always possible
+                }
+                else
+                {
+                    if (configureIfRequired)
+                        channel.ExchangeDeclare(publish.ExchangeName, publish.ExchangeType, true);
+                    else
+                        channel.ExchangeDeclarePassive(publish.ExchangeName);
+                }
 
-                        //temporary queue should not be verified since it is not supported by rmq client
-                        if((usage & EndpointUsage.Subscribe) == EndpointUsage.Subscribe && !destination.Subscribe.ToLower().StartsWith("amq."))
-                        {
-                            if (configureIfRequired)
-                                channel.QueueDeclare(destination.Subscribe, true, false, false, null);
-                            else
-                                channel.QueueDeclarePassive(destination.Subscribe);
+                //temporary queue should not be verified since it is not supported by rmq client
+                if((usage & EndpointUsage.Subscribe) == EndpointUsage.Subscribe && !destination.Subscribe.ToLower().StartsWith("amq."))
+                {
+                    if (configureIfRequired)
+                        channel.QueueDeclare(destination.Subscribe, true, false, false, null);
+                    else
+                        channel.QueueDeclarePassive(destination.Subscribe);
 
-                            channel.BasicQos(0, 300, false);
+                    channel.BasicQos(0, 300, false);
 
-                            if (configureIfRequired)
-                                channel.QueueBind(destination.Subscribe, publish.ExchangeName, publish.RoutingKey == "" ? "#" : publish.RoutingKey);
-                        }
-                    }
+                    if (configureIfRequired)
+                        channel.QueueBind(destination.Subscribe, publish.ExchangeName, publish.RoutingKey == "" ? "#" : publish.RoutingKey);
                 }
             }
             catch (Exception e)
