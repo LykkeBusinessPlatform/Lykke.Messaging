@@ -153,7 +153,9 @@ namespace Lykke.Messaging.RabbitMq
         {
             // todo: handle unroutable message, otherwise it will be lost, potentially
             // specific exception can be fired here and consumers can handle it
-            _logger.LogError("Message {ReplyCode} was returned", args.ReplyCode);
+            _logger.LogError(
+                "Message (id={MessageId}) was returned with error code {ReplyCode} and text [{ReplyText}]. Initially, it was published on exchange {Exchange} with routing key {RoutingKey}.",
+                args.BasicProperties?.MessageId, args.ReplyCode, args.ReplyText, args.Exchange, args.RoutingKey);
         }
         
         private void OnChannelShutdown(object? sender, ShutdownEventArgs e)
