@@ -34,9 +34,14 @@ namespace Lykke.Messaging.RabbitMq
             IBasicProperties properties,
             ReadOnlyMemory<byte> body)
         {
+            // make a copy of the body, as it can be released any time
+            // https://www.rabbitmq.com/dotnet-api-guide.html#consuming-async
+            var bodyCopy = new byte[body.Length];
+            Buffer.BlockCopy(body.ToArray(), 0, bodyCopy, 0, body.Length);
+            
             try
             {
-                m_Callback(properties, body, ack =>
+                m_Callback(properties, new ReadOnlyMemory<byte>(bodyCopy), ack =>
                 {
                     if (ack)
                         Model.BasicAck(deliveryTag, false);
