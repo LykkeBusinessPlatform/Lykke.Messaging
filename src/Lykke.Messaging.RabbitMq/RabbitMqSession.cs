@@ -80,6 +80,19 @@ namespace Lykke.Messaging.RabbitMq
             }
         }
 
+        /// <summary>
+        /// Proxy for <see cref="ExecuteChannelOperation{T}"/> that accepts Action
+        /// </summary>
+        /// <param name="operation"></param>
+        private void ExecuteChannelOperation(Action operation)
+        {
+            ExecuteChannelOperation(() =>
+            {
+                operation();
+                return 0;
+            });
+        }
+
         private void CloseChannel()
         {
             if (_channel == null)
@@ -158,7 +171,7 @@ namespace Lykke.Messaging.RabbitMq
             BinaryMessage message,
             Action<IBasicProperties> tuneMessage = null)
         {
-            var properties = _channel.CreateBasicProperties();
+            var properties = ExecuteChannelOperationWithRetry(() => _channel.CreateBasicProperties());
 
             properties.Headers = new Dictionary<string, object>();
             properties.DeliveryMode = 2; //persistent
@@ -349,7 +362,7 @@ namespace Lykke.Messaging.RabbitMq
         /// <param name="operation"></param>
         public void ExecuteChannelOperationWithRetry(Action operation)
         {
-            _retryPolicyProvider.RegularPolicy.Execute(operation);
+            _retryPolicyProvider.RegularPolicy.Execute(() => ExecuteChannelOperation(operation));
         }
 
         public void Dispose()
