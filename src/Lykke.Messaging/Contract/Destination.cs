@@ -4,7 +4,7 @@ namespace Lykke.Messaging.Contract
 {
     /// <summary>
     /// Transport-agnostic destination address.
-    /// Keeps information about the destination address for publishing and
+    /// Keeps information about the destination address for publishing and/or
     /// subscribing.
     /// Depending on the underlying transport the address can differ depending
     /// on its usage for publishing or subscribing.
@@ -24,12 +24,15 @@ namespace Lykke.Messaging.Contract
 
         public Destination(string publish, string subscribe)
         {
-            if (string.IsNullOrWhiteSpace(publish))
-                throw new ArgumentNullException(nameof(publish), "Publish address cannot be empty");
+            if (string.IsNullOrWhiteSpace(publish)
+                && string.IsNullOrWhiteSpace(subscribe))
+            {
+                throw new ArgumentNullException(nameof(publish),
+                    "Both, publish and subscribe addresses cannot be empty");
+
+            }
+
             Publish = publish;
-            
-            if (string.IsNullOrWhiteSpace(subscribe))
-                throw new ArgumentNullException(nameof(subscribe), "Subscribe address cannot be empty");
             Subscribe = subscribe;
         }
 
