@@ -16,12 +16,14 @@ namespace Lykke.Messaging.RabbitMq
     internal class RabbitMqSession : IMessagingSession
     {
         private readonly CompositeDisposable m_Subscriptions = new CompositeDisposable();
-        private readonly Dictionary<string, DefaultBasicConsumer> m_Consumers = new Dictionary<string, DefaultBasicConsumer>();
+        private readonly Dictionary<string, DefaultBasicConsumer> _consumers =
+            new Dictionary<string, DefaultBasicConsumer>();
         private readonly IRetryPolicyProvider _retryPolicyProvider;
         private readonly bool _publisherConfirms;
         private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger<RabbitMqSession> _logger;
         private readonly IAutorecoveringConnection _connection;
+        private readonly object _lockObject = new object();
         
         private IModel _channel;
 
@@ -43,7 +45,8 @@ namespace Lykke.Messaging.RabbitMq
         /// operation and returns result. If operation fails, the channel might
         /// be closed depending on the failure type. In case of recoverable
         /// failure the exception is wrapped into RecoverableFailureException,
-        /// consumer can unharmfully retry.  
+        /// consumer can unharmfully retry. It is guaranteed when operation executes
+        /// the channel is initialized and ready to use.
         /// </summary>
         /// <param name="operation"></param>
         /// <typeparam name="T"></typeparam>
@@ -53,13 +56,13 @@ namespace Lykke.Messaging.RabbitMq
         /// </exception>
         private T ExecuteChannelOperation<T>(Func<T> operation)
         {
-            _channel ??= InitializeChannel();
-
             try
             {
-                lock (_channel)
+                EnsureChannel();
+                
+                lock (_lockObject)
                 {
-                    return operation();   
+                    return operation();
                 }
             }
             catch (Exception e)
@@ -95,11 +98,11 @@ namespace Lykke.Messaging.RabbitMq
 
         private void CloseChannel()
         {
-            if (_channel == null)
-                return;
-
-            lock (_channel)
+            lock (_lockObject)
             {
+                if (_channel == null)
+                    return;
+                
                 _channel.Close();
 
                 if (_channel is IRecoverable recoverable)
@@ -117,7 +120,7 @@ namespace Lykke.Messaging.RabbitMq
             }
         }
 
-        private IModel InitializeChannel()
+        private IModel CreateChannel()
         {
             var channel = _connection.CreateModel();
 
@@ -137,6 +140,16 @@ namespace Lykke.Messaging.RabbitMq
             channel.BasicQos(0, 300, false);
             
             return channel;
+        }
+        
+        private IModel EnsureChannel()
+        {
+            lock (_lockObject)
+            {
+                _channel ??= CreateChannel();
+            }
+
+            return _channel;
         }
         
         private void OnAck(object? sender, BasicAckEventArgs args)
@@ -221,10 +234,10 @@ namespace Lykke.Messaging.RabbitMq
 
         private IDisposable Subscribe(string destination, Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> callback, string messageType)
         {
-            lock (m_Consumers)
+            lock (_consumers)
             {
                 DefaultBasicConsumer basicConsumer;
-                m_Consumers.TryGetValue(destination, out basicConsumer);
+                _consumers.TryGetValue(destination, out basicConsumer);
                 if (messageType == null)
                 {
                     if (basicConsumer is SharedConsumer)
@@ -253,8 +266,9 @@ namespace Lykke.Messaging.RabbitMq
         {
             if (consumer == null)
             {
-                consumer = new SharedConsumer(_loggerFactory, _channel);
-                m_Consumers[destination] = consumer;
+                consumer = new SharedConsumer(_loggerFactory, EnsureChannel());
+                _consumers[destination] = consumer;
+                
                 ExecuteChannelOperationWithRetry(() => _channel.BasicConsume(destination, false, consumer));
             }
 
@@ -262,31 +276,30 @@ namespace Lykke.Messaging.RabbitMq
 
             return Disposable.Create(() =>
                 {
-                    lock (m_Consumers)
+                    lock (_consumers)
                     {
                         if (!consumer.RemoveCallback(messageType))
-                            m_Consumers.Remove(destination);
+                            _consumers.Remove(destination);
                     }
                 });
         }
 
-        private IDisposable SubscribeNonShared(string destination, Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> callback)
+        private IDisposable SubscribeNonShared(string destination,
+            Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> callback)
         {
-            var consumer = new Consumer(_loggerFactory, _channel, callback);
+            var consumer = new Consumer(_loggerFactory, EnsureChannel(), callback);
+            _consumers[destination] = consumer;
 
             ExecuteChannelOperationWithRetry(() => _channel.BasicConsume(destination, false, consumer));
-
-            m_Consumers[destination] = consumer;
-            // ReSharper disable ImplicitlyCapturedClosure
+            
             return Disposable.Create(() =>
+            {
+                lock (_consumers)
                 {
-                    lock (m_Consumers)
-                    {
-                        consumer.Dispose();
-                        m_Consumers.Remove(destination);
-                    }
-                });
-            // ReSharper restore ImplicitlyCapturedClosure
+                    consumer.Dispose();
+                    _consumers.Remove(destination);
+                }
+            });
         }
 
         public Destination CreateTemporaryDestination()
@@ -351,7 +364,7 @@ namespace Lykke.Messaging.RabbitMq
         /// <param name="operation">The delegate to execute</param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public T ExecuteChannelOperationWithRetry<T>(Func<T> operation)
+        private T ExecuteChannelOperationWithRetry<T>(Func<T> operation)
         {
             return _retryPolicyProvider.RegularPolicy.Execute(() => ExecuteChannelOperation(operation));
         }
@@ -362,16 +375,16 @@ namespace Lykke.Messaging.RabbitMq
         /// if required, will be handled transparently for the consumer.
         /// </summary>
         /// <param name="operation"></param>
-        public void ExecuteChannelOperationWithRetry(Action operation)
+        private void ExecuteChannelOperationWithRetry(Action operation)
         {
             _retryPolicyProvider.RegularPolicy.Execute(() => ExecuteChannelOperation(operation));
         }
 
         public void Dispose()
         {
-            lock (m_Consumers)
+            lock (_consumers)
             {
-                foreach (var c in m_Consumers.Values)
+                foreach (var c in _consumers.Values)
                 {
                     if (c is IDisposable consumer)
                         consumer.Dispose();
