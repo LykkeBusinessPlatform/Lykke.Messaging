@@ -62,7 +62,7 @@ namespace Lykke.Messaging
                 {
                     messagingSession = new MessagingSessionWrapper(_loggerFactory, endpoint.TransportId, name);
 
-                    messagingSession.SetSession(transport.CreateSession(displayName: Helper.BuildSessionDisplayName(endpoint.Destination)));
+                    messagingSession.SetSession(transport.CreateSession(displayName: Helper.BuildSessionDisplayName()));
                     m_MessagingSessions.Add(messagingSession);
                 }
             }
