@@ -4,25 +4,19 @@ using Microsoft.Extensions.Logging;
 
 namespace Lykke.Messaging.RabbitMq
 {
-    internal class Consumer : DefaultBasicConsumer, IDisposable
+    public class Consumer : DefaultBasicConsumer, IDisposable
     {
-        private readonly Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> m_Callback;
+        private readonly Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> _callback;
         private readonly ILogger<Consumer> _logger;
 
         public Consumer(
-            ILoggerFactory loggerFactory,
             IModel model,
-            Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> callback)
-            
+            Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> callback,
+            ILoggerFactory loggerFactory)
             : base(model)
         {
-            if (loggerFactory == null)
-            {
-                throw new ArgumentNullException(nameof(loggerFactory));
-            }
-
-            _logger = loggerFactory.CreateLogger<Consumer>();
-            m_Callback = callback ?? throw new ArgumentNullException(nameof(callback));
+            _callback = callback ?? throw new ArgumentNullException(nameof(callback));
+            _logger = loggerFactory?.CreateLogger<Consumer>() ?? throw new ArgumentNullException(nameof(loggerFactory));
         }
 
         public override void HandleBasicDeliver(
@@ -38,10 +32,10 @@ namespace Lykke.Messaging.RabbitMq
             // https://www.rabbitmq.com/dotnet-api-guide.html#consuming-async
             var bodyCopy = new byte[body.Length];
             Buffer.BlockCopy(body.ToArray(), 0, bodyCopy, 0, body.Length);
-            
+
             try
             {
-                m_Callback(properties, new ReadOnlyMemory<byte>(bodyCopy), ack =>
+                _callback(properties, new ReadOnlyMemory<byte>(bodyCopy), ack =>
                 {
                     if (ack)
                         Model.BasicAck(deliveryTag, false);
@@ -52,28 +46,42 @@ namespace Lykke.Messaging.RabbitMq
             catch (Exception e)
             {
                 _logger.LogError(e, "{Method}: error", nameof(HandleBasicDeliver));
+                Model.BasicNack(deliveryTag, false, true);
             }
+        }
+
+        # region Dispose pattern
+        
+        private bool _disposed = false;
+
+        protected void Dispose(bool disposing)
+        {
+            if (_disposed) return;
+            
+            if (disposing && IsRunning)
+            {
+                try
+                {
+                    foreach (var consumerTag in ConsumerTags)
+                    {
+                        Model.BasicCancel(consumerTag);
+                    }
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "{Method}: error", nameof(Dispose));
+                }
+            }
+
+            _disposed = true;
         }
 
         public void Dispose()
         {
-            lock (Model)
-            {
-                if (Model.IsOpen)
-                {
-                    try
-                    {
-                        foreach (var tag in ConsumerTags)
-                        {
-                            Model.BasicCancel(tag);
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogError(e, "{Method}: error", nameof(Dispose));
-                    }
-                }
-            }
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
+        
+        # endregion
     }
 }

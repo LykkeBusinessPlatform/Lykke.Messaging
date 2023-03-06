@@ -287,7 +287,7 @@ namespace Lykke.Messaging.RabbitMq
         private IDisposable SubscribeNonShared(string destination,
             Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> callback)
         {
-            var consumer = new Consumer(_loggerFactory, EnsureChannel(), callback);
+            var consumer = new Consumer(EnsureChannel(), callback, _loggerFactory);
             _consumers[destination] = consumer;
 
             ExecuteChannelOperationWithRetry(() => _channel.BasicConsume(destination, false, consumer));

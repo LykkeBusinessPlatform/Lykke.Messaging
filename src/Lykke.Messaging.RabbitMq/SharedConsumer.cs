@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Lykke.Messaging.RabbitMq
 {
-    public class SharedConsumer : DefaultBasicConsumer,IDisposable
+    public class SharedConsumer : DefaultBasicConsumer, IDisposable
     {
         private readonly Dictionary<string, Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>>> m_Callbacks
             = new Dictionary<string, Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>>>();
@@ -17,18 +17,13 @@ namespace Lykke.Messaging.RabbitMq
 
         public SharedConsumer(ILoggerFactory loggerFactory, IModel model) : base(model)
         {
-            if (loggerFactory == null)
-            {
-                throw new ArgumentNullException(nameof(loggerFactory));
-            }
-
-            _logger = loggerFactory.CreateLogger<SharedConsumer>();
+            _logger = loggerFactory?.CreateLogger<SharedConsumer>() ?? throw new ArgumentNullException(nameof(loggerFactory));
         }
 
         public void AddCallback(Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> callback, string messageType)
         {
             if (callback == null) throw new ArgumentNullException("callback");
-            if (string.IsNullOrEmpty(messageType)) throw new ArgumentNullException("messageType");
+            if (string.IsNullOrEmpty(messageType)) throw new ArgumentNullException(nameof(messageType));
             lock (m_Callbacks)
             {
                 if (m_Callbacks.ContainsKey(messageType))
@@ -86,6 +81,7 @@ namespace Lykke.Messaging.RabbitMq
                     catch (Exception e)
                     {
                         _logger.LogError(e, "{Method}: error", nameof(HandleBasicDeliver));
+                        Model.BasicNack(deliveryTag, false, true);
                     }
                     return;
                 }
