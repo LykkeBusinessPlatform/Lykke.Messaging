@@ -37,11 +37,13 @@ jobs:
         run: |
           echo "TARGET=${{ github.event.inputs.target }}" >> $GITHUB_ENV
           if [[ "${{ github.event.inputs.target }}" == "RabbitMq" ]]; then
-            echo "PROJECT_FOLDER=src/Lykke.Messaging.RabbitMq" >> $GITHUB_ENV
+            PROJECT_FOLDER="src/Lykke.Messaging.RabbitMq"
+            echo "PROJECT_FOLDER=$PROJECT_FOLDER" >> $GITHUB_ENV
           fi
 
           if [[ "${{ github.event.inputs.target }}" == "Messaging" ]]; then
-            echo "PROJECT_FOLDER=src/Lykke.Messaging" >> $GITHUB_ENV
+            PROJECT_FOLDER="src/Lykke.Messaging"
+            echo "PROJECT_FOLDER=$PROJECT_FOLDER" >> $GITHUB_ENV
           fi
 
           if [[ -z "$PROJECT_FOLDER" ]]; then
