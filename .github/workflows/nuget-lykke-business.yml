@@ -70,11 +70,11 @@ jobs:
           TAG_NUMBERS=${TAG_VERSION#v} # Remove preceding "v" if present
           echo "TAG_NUMBERS=$TAG_NUMBERS" >> $GITHUB_ENV
 
-          if [[ "$env.TARGET" == "RabbitMq" ]]; then
+          if [[ "${{ env.TARGET }}" == "RabbitMq" ]]; then
             TAG_NAME="rmq-${TAG_NUMBERS}"
           fi
 
-          if [[ "$env.TARGET" == "Messaging" ]]; then
+          if [[ "${{ env.TARGET }}" == "Messaging" ]]; then
             TAG_NAME="msg-${TAG_NUMBERS}"
           fi
 
