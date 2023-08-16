@@ -5,12 +5,6 @@ name: Publish Lykke Infrastructure NuGet Package
 on:
   workflow_dispatch:
     inputs:
-      target:
-        type: choice
-        description: Library to release
-        options:
-        - RabbitMq
-        - Messaging
       version:
         description: 'Version number (e.g. v1.0.0)'
         required: true
@@ -32,95 +26,30 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Define variables
-        id: vars
-        run: |
-          echo "TARGET=${{ github.event.inputs.target }}" >> $GITHUB_ENV
-          if [[ "${{ github.event.inputs.target }}" == "RabbitMq" ]]; then
-            PROJECT_FOLDER="src/Lykke.Messaging.RabbitMq"
-            echo "PROJECT_FOLDER=$PROJECT_FOLDER" >> $GITHUB_ENV
-          fi
-
-          if [[ "${{ github.event.inputs.target }}" == "Messaging" ]]; then
-            PROJECT_FOLDER="src/Lykke.Messaging"
-            echo "PROJECT_FOLDER=$PROJECT_FOLDER" >> $GITHUB_ENV
-          fi
-
-          if [[ -z "$PROJECT_FOLDER" ]]; then
-            echo "Unknown target. Failing the workflow."
-            exit 1
-          fi
-
       - name: Checkout code
         uses: actions/checkout@v3
         with:
           ref: ${{ github.ref }}
 
-      # Checking out deployment tools repository from Bitbucket
-      # todo: these tools are supposed to be used for SNOW project but can be used for LYKKE as well,
-      # should be adopted and moved to separate repository
       - name: Checkout deployment tools
         run: |
           git clone -v https://${{ secrets.BITBUCKET_USER }}:${{ secrets.BITBUCKET_PASSWORD }}@bitbucket.org/lykke-snow/lykke.snow.deployment.git lykke.snow.deployment
 
-      # Parses the version number, removes prefix and stores it in TAG_NUMBERS for later use
       - name: Parse version number
-        run: |
-          TAG_VERSION=${{ github.event.inputs.version }}
-          TAG_NUMBERS=${TAG_VERSION#v} # Remove preceding "v" if present
-          echo "TAG_NUMBERS=$TAG_NUMBERS" >> $GITHUB_ENV
+        uses: LykkeBusiness/.github/actions/parse-version@parse-version-v1
+        with:
+          version: ${{ github.event.inputs.version }}
 
-          if [[ "${{ env.TARGET }}" == "RabbitMq" ]]; then
-            TAG_NAME="rmq-${TAG_NUMBERS}"
-          fi
-
-          if [[ "${{ env.TARGET }}" == "Messaging" ]]; then
-            TAG_NAME="msg-${TAG_NUMBERS}"
-          fi
-
-          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
-
-      # Injects the new version into CHANGELOG.md by replacing placeholder
       - name: Inject new version into changelog file
         if: ${{ github.event.inputs.update_changelog == 'true' }}
-        run: |
-          FILES=$(find ${{ env.PROJECT_FOLDER }} -type f -name 'CHANGELOG.md')
-          if [[ -z "$FILES" ]]; then
-            echo "CHANGELOG.md not found. Failing the workflow."
-            exit 1
-          fi
-
-          COUNT=$(echo "$FILES" | wc -l)
-          if [[ $COUNT -ne 1 ]]; then
-            echo "Found $COUNT instances of CHANGELOG.md. There must be exactly one. Failing the workflow."
-            exit 1
-          fi
-          
-          source ./lykke.snow.deployment/tools/core/changelog.sh
-          FILE=$(echo "$FILES" | head -n 1)
-          TBD_REPLACED=$(replace_tbd_placeholder "$FILE" "${{ env.TAG_NUMBERS }}")
-          if [[ $TBD_REPLACED -eq 0 ]]; then
-            echo "CHANGELOG.md does not contain a placeholder for the new version. Failing the workflow."
-            exit 1
-          fi
+        uses: LykkeBusiness/.github/actions/inject-version-changelog@inject-version-changelog-v2
+        with:
+          version: ${{ env.TAG_NUMBERS }}
       
-      # Updates all .csproj files with the new version
       - name: Update .csproj files with new version
-        run: |
-          FILES=$(find "${{ env.PROJECT_FOLDER }}" -type f -name '*.csproj')
-          if [[ -z "$FILES" ]]; then
-            echo "No .csproj files found. Failing the workflow."
-            exit 1
-          fi
-
-          source ./lykke.snow.deployment/tools/core/csproj.sh
-          for FILE in $FILES; do
-            VERSION_UPDATED=$(update_csproj_version "$FILE" "${{ env.TAG_NUMBERS }}")
-            if [[ $VERSION_UPDATED -eq 0 ]]; then
-              echo "Failed to update version in $FILE. Failing the workflow."
-              exit 1
-            fi
-          done
+        uses: LykkeBusiness/.github/actions/update-version-csproj@update-version-csproj-v1
+        with:
+          version: ${{ env.TAG_NUMBERS }}
           
       # Tags the current commit with the new version
       - name: Tag version
@@ -130,7 +59,7 @@ jobs:
           git add -A
           git reset -- lykke.snow.deployment
           git commit -m "Version ${{ env.TAG_NUMBERS }}"
-          git tag -fa ${{ env.TAG_NAME }} -m "${{ env.TAG_NAME }}"
+          git tag -fa ${{ github.event.inputs.version }} -m "${{ github.event.inputs.version }}"
           git push origin --tags
           git push origin ${{ github.ref }}
       
@@ -153,46 +82,15 @@ jobs:
 
       - name: Push
         run: dotnet nuget push out/*.nupkg --api-key ${{ secrets.NUGET_TOKEN }} --source https://api.nuget.org/v3/index.json --skip-duplicate
-        
-      # Extracts release name and release notes from CHANGELOG.md
-      - name: Extract release name and release notes
+
+      - name: Extract release notes from changelog file
         if: ${{ github.event.inputs.create_release == 'true' }}
-        run: |
-          CHANGELOG_FILE=$(find "${{ env.PROJECT_FOLDER }}" -type f -name 'CHANGELOG.md')
-          if [[ -z "$CHANGELOG_FILE" ]]; then
-            echo "CHANGELOG.md not found. Failing the workflow."
-            exit 1
-          fi
-
-          RELEASE_NAME="${{ github.event.inputs.release_name }}"
-          if [[ -z "$RELEASE_NAME" ]]; then
-            echo "Release name not provided. Extracting from CHANGELOG.md"
-            # Extract the latest title
-            LATEST_TITLE=$(grep -E '^## [0-9.]+' "$CHANGELOG_FILE" | head -n 1)
-            # Check if the latest title matches the expected pattern
-            if [[ ! "$LATEST_TITLE" =~ ^##\ [0-9.]+(\ -\ (.*))?\ \([0-9-]*\)$ ]]; then
-              echo "Failed to extract release name from CHANGELOG.md."
-            else
-              # Extract the release name from the latest title, if present
-              RELEASE_NAME=${BASH_REMATCH[2]}
-            fi
-          fi
-
-          if [[ -z "$RELEASE_NAME" ]]; then
-            RELEASE_NAME="Release ${{ env.TAG_NAME }}"
-            echo "Defaulting release name to $RELEASE_NAME"
-          fi
-
-          RELEASE_NOTES=$(awk '/^## / { if (found) exit; if (!found) found=1; next } found && NF > 0 { print }' $CHANGELOG_FILE)
-          if [[ -z "$RELEASE_NOTES" ]]; then
-            echo "Failed to extract release notes from CHANGELOG.md. Failing the workflow."
-            exit 1
-          fi
-
-          echo "RELEASE_NAME=$RELEASE_NAME" >> $GITHUB_ENV
-          echo "$RELEASE_NOTES" > release_notes.txt
-          echo "RELEASE_NOTES_FILE=release_notes.txt" >> $GITHUB_ENV
-
+        uses: LykkeBusiness/.github/actions/extract-notes-changelog@extract-notes-changelog-v1
+        with:
+          auto_name_release: true
+          release_name: ${{ github.event.inputs.release_name }}
+          version: ${{ env.TAG_NUMBERS }}
+        
       # Creates a GitHub release with the release name and release notes from CHANGELOG.md
       - name: Create GitHub Release
         if: ${{ github.event.inputs.create_release == 'true' }}
@@ -200,7 +98,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ env.TAG_NAME }}
+          tag_name: ${{ github.event.inputs.version }}
           release_name: ${{ env.RELEASE_NAME }}
           body_path: ${{ env.RELEASE_NOTES_FILE }}
           draft: false
