@@ -10,6 +10,7 @@ using Lykke.Messaging.RabbitMq.Retry;
 using Lykke.Messaging.Transports;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client.Events;
+using RabbitMQ.Client.Framing.Impl;
 
 namespace Lykke.Messaging.RabbitMq
 {
@@ -22,14 +23,14 @@ namespace Lykke.Messaging.RabbitMq
         private readonly bool _publisherConfirms;
         private readonly ILoggerFactory _loggerFactory;
         private readonly ILogger<RabbitMqSession> _logger;
-        private readonly IAutorecoveringConnection _connection;
+        private readonly AutorecoveringConnection _connection;
         private readonly object _lockObject = new object();
         
         private IModel _channel;
 
         public RabbitMqSession(
             ILoggerFactory loggerFactory,
-            IAutorecoveringConnection connection,
+            AutorecoveringConnection connection,
             IRetryPolicyProvider retryPolicyProvider,
             bool publisherConfirms = false)
         {
@@ -218,9 +219,9 @@ namespace Lykke.Messaging.RabbitMq
             Send(publicationAddress, message, tuneMessage);
         }
         
-        private BinaryMessage ToBinaryMessage(IBasicProperties properties, ReadOnlyMemory<byte> bytes)
+        private BinaryMessage ToBinaryMessage(IBasicProperties properties, byte[] bytes)
         {
-            var binaryMessage = new BinaryMessage {Bytes = bytes.ToArray(), Type = properties.Type};
+            var binaryMessage = new BinaryMessage {Bytes = bytes, Type = properties.Type};
             if (properties.Headers != null)
             {
                 foreach (var header in properties.Headers)
@@ -232,7 +233,7 @@ namespace Lykke.Messaging.RabbitMq
             return binaryMessage;
         }
 
-        private IDisposable Subscribe(string destination, Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> callback, string messageType)
+        private IDisposable Subscribe(string destination, Action<IBasicProperties, byte[], Action<bool>> callback, string messageType)
         {
             lock (_consumers)
             {
@@ -260,7 +261,7 @@ namespace Lykke.Messaging.RabbitMq
 
         private IDisposable SubscribeShared(
             string destination,
-            Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> callback,
+            Action<IBasicProperties, byte[], Action<bool>> callback,
             string messageType,
             SharedConsumer consumer)
         {
@@ -285,7 +286,7 @@ namespace Lykke.Messaging.RabbitMq
         }
 
         private IDisposable SubscribeNonShared(string destination,
-            Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> callback)
+            Action<IBasicProperties, byte[], Action<bool>> callback)
         {
             var consumer = new Consumer(EnsureChannel(), callback, _loggerFactory);
             _consumers[destination] = consumer;
@@ -333,7 +334,7 @@ namespace Lykke.Messaging.RabbitMq
         public IDisposable RegisterHandler(string destination, Func<BinaryMessage, BinaryMessage> handler, string messageType)
         {
            
-            var subscription = Subscribe(destination, (properties, bytes,acknowledge) =>
+            var subscription = Subscribe(destination, (properties, bytes, acknowledge) =>
             {
                 var correlationId = properties.CorrelationId;
                 var responseBytes = handler(ToBinaryMessage(properties, bytes));

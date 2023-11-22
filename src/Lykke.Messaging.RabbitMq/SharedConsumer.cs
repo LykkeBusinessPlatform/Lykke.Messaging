@@ -9,8 +9,8 @@ namespace Lykke.Messaging.RabbitMq
 {
     public class SharedConsumer : DefaultBasicConsumer, IDisposable
     {
-        private readonly Dictionary<string, Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>>> m_Callbacks
-            = new Dictionary<string, Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>>>();
+        private readonly Dictionary<string, Action<IBasicProperties, byte[], Action<bool>>> m_Callbacks
+            = new Dictionary<string, Action<IBasicProperties, byte[], Action<bool>>>();
         private readonly AutoResetEvent m_CallBackAdded = new AutoResetEvent(false);
         private readonly ManualResetEvent m_Stop = new ManualResetEvent(false);
         private readonly ILogger<SharedConsumer> _logger;
@@ -20,7 +20,7 @@ namespace Lykke.Messaging.RabbitMq
             _logger = loggerFactory?.CreateLogger<SharedConsumer>() ?? throw new ArgumentNullException(nameof(loggerFactory));
         }
 
-        public void AddCallback(Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> callback, string messageType)
+        public void AddCallback(Action<IBasicProperties, byte[], Action<bool>> callback, string messageType)
         {
             if (callback == null) throw new ArgumentNullException("callback");
             if (string.IsNullOrEmpty(messageType)) throw new ArgumentNullException(nameof(messageType));
@@ -53,12 +53,12 @@ namespace Lykke.Messaging.RabbitMq
             string exchange,
             string routingKey,
             IBasicProperties properties,
-            ReadOnlyMemory<byte> body)
+            byte[] body)
         {
             bool waitForCallback = true;
             while (true)
             {
-                Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> callback;
+                Action<IBasicProperties, byte[], Action<bool>> callback;
                 lock (m_Callbacks)
                 {
                     if(waitForCallback)
@@ -111,10 +111,7 @@ namespace Lykke.Messaging.RabbitMq
                 {
                     try
                     {
-                        foreach (var tag in ConsumerTags)
-                        {
-                            Model.BasicCancel(tag);
-                        }
+                        Model.BasicCancel(ConsumerTag);
                     }
                     catch (Exception e)
                     {

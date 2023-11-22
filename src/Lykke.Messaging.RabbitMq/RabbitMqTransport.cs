@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.PlatformAbstractions;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
+using RabbitMQ.Client.Framing.Impl;
 
 namespace Lykke.Messaging.RabbitMq
 {
@@ -26,7 +27,7 @@ namespace Lykke.Messaging.RabbitMq
         private readonly ILogger<RabbitMqTransport> _logger;
         private readonly IRetryPolicyProvider _retryPolicyProvider;
         
-        private IAutorecoveringConnection _connection;
+        private AutorecoveringConnection _connection;
 
         internal long SessionsCount => m_Sessions.Count;
 
@@ -85,7 +86,7 @@ namespace Lykke.Messaging.RabbitMq
                 : factories.ToArray();
         }
 
-        private IAutorecoveringConnection CreateConnection(string displayName)
+        private AutorecoveringConnection CreateConnection(string displayName)
         {
             Exception exception = null;
 
@@ -94,7 +95,7 @@ namespace Lykke.Messaging.RabbitMq
                 try
                 {
                     var connection = _retryPolicyProvider.InitialConnectionPolicy.Execute(() =>
-                        m_Factories[i].CreateConnection(displayName) as IAutorecoveringConnection);
+                        m_Factories[i].CreateConnection(displayName) as AutorecoveringConnection);
                     
                     _logger.LogInformation(
                         "{Method}: Created rmq connection to {HostName} {ConnectionName}.",
@@ -144,7 +145,7 @@ namespace Lykke.Messaging.RabbitMq
                 session.Dispose();
             }
             
-            _connection?.Dispose();
+            _connection?.Close();
         }
 
         public IMessagingSession CreateSession(bool confirmedSending = false, string displayName = null)

@@ -6,12 +6,12 @@ namespace Lykke.Messaging.RabbitMq
 {
     public class Consumer : DefaultBasicConsumer, IDisposable
     {
-        private readonly Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> _callback;
+        private readonly Action<IBasicProperties, byte[], Action<bool>> _callback;
         private readonly ILogger<Consumer> _logger;
 
         public Consumer(
             IModel model,
-            Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> callback,
+            Action<IBasicProperties, byte[], Action<bool>> callback,
             ILoggerFactory loggerFactory)
             : base(model)
         {
@@ -26,16 +26,11 @@ namespace Lykke.Messaging.RabbitMq
             string exchange,
             string routingKey,
             IBasicProperties properties,
-            ReadOnlyMemory<byte> body)
+            byte[] body)
         {
-            // make a copy of the body, as it can be released any time
-            // https://www.rabbitmq.com/dotnet-api-guide.html#consuming-async
-            var bodyCopy = new byte[body.Length];
-            Buffer.BlockCopy(body.ToArray(), 0, bodyCopy, 0, body.Length);
-
             try
             {
-                _callback(properties, new ReadOnlyMemory<byte>(bodyCopy), ack =>
+                _callback(properties, body, ack =>
                 {
                     if (ack)
                         Model.BasicAck(deliveryTag, false);
@@ -62,10 +57,7 @@ namespace Lykke.Messaging.RabbitMq
             {
                 try
                 {
-                    foreach (var consumerTag in ConsumerTags)
-                    {
-                        Model.BasicCancel(consumerTag);
-                    }
+                    Model.BasicCancel(ConsumerTag);
                 }
                 catch (Exception e)
                 {
