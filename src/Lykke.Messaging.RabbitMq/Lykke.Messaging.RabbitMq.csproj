@@ -1,23 +1,28 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
-    <LangVersion>8.0</LangVersion>
-    <Version>6.0.9</Version>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <Version>1.0.1</Version>
     <PackageId>LykkeBiz.Messaging.RabbitMq</PackageId>
     <Authors>Lykke Business</Authors>
     <Description>Lykke Business common tools and utilities</Description>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <Copyright>Copyright 2023 (c) Lykke Business. All rights reserved.</Copyright>
+    <Copyright>Copyright 2022 (c) Lykke Business. All rights reserved.</Copyright>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="LykkeBiz.Messaging" Version="11.0.3" />
-    <PackageReference Include="Microsoft.Extensions.Options" Version="6.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.3" />
-    <PackageReference Include="RabbitMQ.Client" Version="6.4.0" />
-    <PackageReference Include="Polly" Version="7.2.3" />
-    <PackageReference Include="System.Reactive" Version="4.4.1" />
+    <PackageReference Include="RabbitMQ.Client" Version="5.2.0" />
+    <PackageReference Include="SourceLink.Create.CommandLine" Version="2.8.3" PrivateAssets="All" />
+    <PackageReference Include="System.Reactive.Core" Version="3.1.1" />
+    <PackageReference Include="System.Reactive.Interfaces" Version="3.1.1" />
+    <PackageReference Include="LykkeBiz.Messaging" Version="7.0.4" />
   </ItemGroup>
-  
+
+  <ItemGroup Label="dotnet pack instructions">
+    <Content Include="$(OutputPath)$(AssemblyName).pdb">
+      <Pack>true</Pack>
+      <PackagePath>lib/netstandard2.0</PackagePath>
+    </Content>
+  </ItemGroup>
+
 </Project>

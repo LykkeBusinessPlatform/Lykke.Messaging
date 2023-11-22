@@ -1,20 +1,15 @@
 ﻿using System;
+using Common.Log;
+using Lykke.Common.Log;
 using Lykke.Messaging.Contract;
 using Lykke.Messaging.Transports;
-using Microsoft.Extensions.Logging;
 
 namespace Lykke.Messaging
 {
-    /// <summary>
-    /// @atarutin: Didn't realize the intention yet
-    /// It is implemented as decorator however it just routes calls to an
-    /// underlying messaging session. Looks like the wrapper just adds error
-    /// handling as a separate method.
-    /// </summary>
     internal class MessagingSessionWrapper:IMessagingSession
     {
+        private readonly ILog _log;
 
-        private readonly ILogger<MessagingSessionWrapper> _logger;
         private IMessagingSession _messagingSession;
 
         public string TransportId { get; private set; }
@@ -22,15 +17,24 @@ namespace Lykke.Messaging
 
         public event Action OnFailure;
 
-        public MessagingSessionWrapper(ILoggerFactory loggerFactory, string transportId, string name)
+        [Obsolete]
+        public MessagingSessionWrapper(ILog log, string transportId, string name)
         {
-            if (loggerFactory == null)
+            _log = log;
+
+            TransportId = transportId;
+            Name = name;
+        }
+
+        public MessagingSessionWrapper(ILogFactory logFactory, string transportId, string name)
+        {
+            if (logFactory == null)
             {
-                throw new ArgumentNullException(nameof(loggerFactory));
+                throw new ArgumentNullException(nameof(logFactory));
             }
 
-            _logger = loggerFactory.CreateLogger<MessagingSessionWrapper>();
-            
+            _log = logFactory.CreateLog(this);
+
             TransportId = transportId;
             Name = name;
         }
@@ -53,7 +57,7 @@ namespace Lykke.Messaging
                 }
                 catch (Exception e)
                 {
-                    _logger.LogError(e, "{Method}: error", nameof(ReportFailure));
+                    _log.WriteError(nameof(MessagingSessionWrapper), nameof(ReportFailure), e);
                 }
             }
         }

@@ -5,11 +5,11 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Lykke.Common.Log;
+using Lykke.Logs;
 using Lykke.Messaging.Contract;
 using Lykke.Messaging.Serialization;
 using Lykke.Messaging.Transports;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NUnit.Framework;
 using Assert = NUnit.Framework.Assert;
@@ -19,16 +19,16 @@ namespace Lykke.Messaging.Tests
     [TestFixture]
     public class ProcessingGroupManagerTests : IDisposable
     {
-        private readonly ILoggerFactory _loggerFactory;
+        private readonly ILogFactory _logFactory;
 
         public ProcessingGroupManagerTests()
         {
-            _loggerFactory = NullLoggerFactory.Instance;
+            _logFactory = LogFactory.Create();
         }
 
         public void Dispose()
         {
-            _loggerFactory?.Dispose();
+            _logFactory?.Dispose();
         }
 
         [SetUp]
@@ -57,13 +57,13 @@ namespace Lykke.Messaging.Tests
         public void SameThreadSubscriptionTest()
         {
             var transportManager = new TransportManager(
-                _loggerFactory,
-                new TransportInfoResolver(new Dictionary<string, TransportInfo>
+                _logFactory,
+                new TransportResolver(new Dictionary<string, TransportInfo>
                     {
                         {"transport-1", new TransportInfo("transport-1", "login1", "pwd1", "None", "InMemory")}
                     }));
-            var processingGroupManager = new ProcessingGroupManager(_loggerFactory, transportManager);
-            var endpoint = new Endpoint("transport-1", new Destination("queue"));
+            var processingGroupManager = new ProcessingGroupManager(_logFactory, transportManager);
+            var endpoint = new Endpoint {Destination = "queue", TransportId = "transport-1"};
             var session = transportManager.GetMessagingSession(endpoint, "pg");
             var usedThreads = new List<int>();
             var subscription = processingGroupManager.Subscribe(endpoint,
@@ -88,18 +88,18 @@ namespace Lykke.Messaging.Tests
         public void MultiThreadThreadSubscriptionTest()
         {
             var transportManager = new TransportManager(
-                _loggerFactory,
-                new TransportInfoResolver(new Dictionary<string, TransportInfo>
+                _logFactory,
+                new TransportResolver(new Dictionary<string, TransportInfo>
                     {
                         {"transport-1", new TransportInfo("transport-1", "login1", "pwd1", "None", "InMemory")}
                     }));
-            var processingGroupManager = new ProcessingGroupManager(_loggerFactory, transportManager, new Dictionary<string, ProcessingGroupInfo>()
+            var processingGroupManager = new ProcessingGroupManager(_logFactory, transportManager, new Dictionary<string, ProcessingGroupInfo>()
             {
                 {
                     "pg", new ProcessingGroupInfo() {ConcurrencyLevel = 3}
                 }
             });
-            var endpoint = new Endpoint("transport-1", new Destination("queue"));
+            var endpoint = new Endpoint {Destination = "queue", TransportId = "transport-1"};
             var processingGroup = transportManager.GetMessagingSession(endpoint, "pg");
             var usedThreads = new List<int>();
             var subscription = processingGroupManager.Subscribe(
@@ -134,12 +134,12 @@ namespace Lykke.Messaging.Tests
         public void QueuedTaskSchedulerIsHiddenTest()
         {
             var transportManager = new TransportManager(
-                _loggerFactory,
-                new TransportInfoResolver(new Dictionary<string, TransportInfo>
+                _logFactory,
+                new TransportResolver(new Dictionary<string, TransportInfo>
                     {
                         {"transport-1", new TransportInfo("transport-1", "login1", "pwd1", "None", "InMemory")}
                     }));
-            var processingGroupManager = new ProcessingGroupManager(_loggerFactory, transportManager, new Dictionary<string, ProcessingGroupInfo>()
+            var processingGroupManager = new ProcessingGroupManager(_logFactory, transportManager, new Dictionary<string, ProcessingGroupInfo>()
             {
                 {
                     "pg", new ProcessingGroupInfo() {ConcurrencyLevel = 1,QueueCapacity = 1000}
@@ -147,7 +147,7 @@ namespace Lykke.Messaging.Tests
             });
 
             var e = new ManualResetEvent(false);
-            var endpoint = new Endpoint("transport-1", new Destination("queue"));
+            var endpoint = new Endpoint {Destination = "queue", TransportId = "transport-1"};
             var processingGroup = transportManager.GetMessagingSession(endpoint, "pg");
             var childTaskFinishedBeforeHandler = false;
             var subscription = processingGroupManager.Subscribe(
@@ -174,13 +174,13 @@ namespace Lykke.Messaging.Tests
         public void MultiThreadPrioritizedThreadSubscriptionTest()
         {
             var transportManager = new TransportManager(
-                _loggerFactory,
-                new TransportInfoResolver(new Dictionary<string, TransportInfo>
+                _logFactory,
+                new TransportResolver(new Dictionary<string, TransportInfo>
                     {
                         {"transport-1", new TransportInfo("transport-1", "login1", "pwd1", "None", "InMemory")}
                     }));
             var processingGroupManager = new ProcessingGroupManager(
-                _loggerFactory,
+                _logFactory,
                 transportManager,
                 new Dictionary<string, ProcessingGroupInfo>()
                 {
@@ -201,9 +201,9 @@ namespace Lykke.Messaging.Tests
                 Thread.Sleep(50);
             };
 
-            var subscription0 = processingGroupManager.Subscribe(new Endpoint("transport-1", new Destination("queue0")), callback, null, "pg", 0);
-            var subscription1 = processingGroupManager.Subscribe(new Endpoint("transport-1", new Destination("queue1")), callback, null, "pg", 1);
-            var subscription2 = processingGroupManager.Subscribe(new Endpoint("transport-1", new Destination("queue2")), callback, null, "pg", 2);
+            var subscription0 = processingGroupManager.Subscribe(new Endpoint { Destination = "queue0", TransportId = "transport-1" }, callback, null, "pg", 0);
+            var subscription1 = processingGroupManager.Subscribe(new Endpoint { Destination = "queue1", TransportId = "transport-1" }, callback, null, "pg", 1);
+            var subscription2 = processingGroupManager.Subscribe(new Endpoint { Destination = "queue2", TransportId = "transport-1" }, callback, null, "pg", 2);
 
             using (subscription0)
             using (subscription1)
@@ -212,7 +212,7 @@ namespace Lykke.Messaging.Tests
                 Enumerable.Range(1, 20)
                     .ToList()
                     .ForEach(i => processingGroupManager.Send(
-                        new Endpoint("transport-1", new Destination("queue" + i % 3)),
+                        new Endpoint { Destination = "queue" + i % 3, TransportId = "transport-1" },
                         new BinaryMessage { Bytes = Encoding.UTF8.GetBytes((i % 3).ToString()) },
                         0,
                         "pg"));
@@ -240,7 +240,7 @@ namespace Lykke.Messaging.Tests
                 DateTime processed = default(DateTime);
                 DateTime acked = default(DateTime);
                 processingGroupManager.Subscribe(
-                    new Endpoint("test", new Destination("test"), false, SerializationFormat.Json),
+                    new Endpoint("test", "test", false, SerializationFormat.Json),
                     (message, acknowledge) =>
                     {
                       processed = DateTime.UtcNow;
@@ -271,7 +271,7 @@ namespace Lykke.Messaging.Tests
             {
                 IDisposable subscription=null ;
                 subscription = processingGroupManager.Subscribe(
-                    new Endpoint("test", new Destination("test"), false, SerializationFormat.Json),
+                    new Endpoint("test", "test", false, SerializationFormat.Json),
                     (message, acknowledge) =>
                     {
                         acknowledge(0,true);
@@ -301,7 +301,7 @@ namespace Lykke.Messaging.Tests
             using (var processingGroupManager = CreateProcessingGroupManagerWithMockedDependencies(action => callback = action))
             {
                 processingGroupManager.Subscribe(
-                    new Endpoint("test", new Destination("test"), false, SerializationFormat.Json),
+                    new Endpoint("test", "test", false, SerializationFormat.Json),
                     (message, acknowledge) =>
                     {
                         acknowledge(60000, true);
@@ -333,7 +333,7 @@ namespace Lykke.Messaging.Tests
                 action => emulateFail = emulateFail ?? action,
                 onSubscribe))
             {
-                using (processingGroupManager.Subscribe(new Endpoint("test", new Destination("test"), false, SerializationFormat.Json), (message, acknowledge) =>
+                using (processingGroupManager.Subscribe(new Endpoint("test", "test", false, SerializationFormat.Json), (message, acknowledge) =>
                 {
                     acknowledge(0, true);
                 }, null, "ProcessingGroup", 0))
@@ -368,7 +368,7 @@ namespace Lykke.Messaging.Tests
                 onSubscribe))
             {
                 var subscription = processingGroupManager.Subscribe(
-                    new Endpoint("test", new Destination("test"), false, SerializationFormat.Json),
+                    new Endpoint("test", "test", false, SerializationFormat.Json),
                     (message, acknowledge) =>
                     {
                         acknowledge(0, true);
@@ -420,7 +420,7 @@ namespace Lykke.Messaging.Tests
                 var complete = new ManualResetEvent(false);
                 var processingGroupManager = CreateProcessingGroupManagerWithMockedDependencies(action => callback = action);
                 Stopwatch sw = Stopwatch.StartNew();
-                processingGroupManager.Subscribe(new Endpoint("test", new Destination("test"), false, SerializationFormat.Json), (message, acknowledge) =>
+                processingGroupManager.Subscribe(new Endpoint("test", "test", false, SerializationFormat.Json), (message, acknowledge) =>
                     {
                         Thread.Sleep(rnd.Next(1,10));
                         acknowledge(delay.Key, true);
@@ -459,7 +459,7 @@ namespace Lykke.Messaging.Tests
                 .Callback<Endpoint, string, Action>((endpoint, name, invocation) => setOnFail(invocation))
                 .Returns(session.Object);
             return new ProcessingGroupManager(
-                _loggerFactory,
+                _logFactory,
                 transportManager.Object,
                 new Dictionary<string, ProcessingGroupInfo>
                 {

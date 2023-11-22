@@ -3,29 +3,40 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
+using Common.Log;
+using Lykke.Common.Log;
 using Lykke.Messaging.Contract;
 using Lykke.Messaging.InMemory;
 using Lykke.Messaging.Transports;
-using Microsoft.Extensions.Logging;
 
 namespace Lykke.Messaging
 {
     internal class TransportManager : ITransportManager
     {
         private readonly ConcurrentDictionary<TransportInfo, ResolvedTransport> m_Transports = new ConcurrentDictionary<TransportInfo, ResolvedTransport>();
-        private readonly ITransportInfoResolver m_TransportInfoResolver;
+        private readonly ILog _log;
+        private readonly ITransportResolver m_TransportResolver;
         private readonly ManualResetEvent m_IsDisposed = new ManualResetEvent(false);
         private readonly ITransportFactory[] m_TransportFactories;
-        private readonly ILoggerFactory _loggerFactory;
+        private readonly  ILogFactory _logFactory;
 
-        public TransportManager(ILoggerFactory loggerFactory, ITransportInfoResolver transportInfoResolver, params ITransportFactory[] transportFactories)
+        [Obsolete]
+        public TransportManager(ILog log, ITransportResolver transportResolver, params ITransportFactory[] transportFactories)
         {
-            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
-            m_TransportFactories = transportFactories.Concat(new[] { new InMemoryTransportFactory() }).ToArray();
-            m_TransportInfoResolver = transportInfoResolver ?? throw new ArgumentNullException(nameof(transportInfoResolver));
+            m_TransportFactories = transportFactories.Concat(new[] {new InMemoryTransportFactory()}).ToArray();
+            _log = log;
+            m_TransportResolver = transportResolver ?? throw new ArgumentNullException(nameof(transportResolver));
         }
 
-        public ITransportInfoResolver TransportInfoResolver => m_TransportInfoResolver;
+        public TransportManager(ILogFactory logFactory, ITransportResolver transportResolver, params ITransportFactory[] transportFactories)
+        {
+            _logFactory = logFactory ?? throw new ArgumentNullException(nameof(logFactory));
+            m_TransportFactories = transportFactories.Concat(new[] { new InMemoryTransportFactory() }).ToArray();
+            m_TransportResolver = transportResolver ?? throw new ArgumentNullException(nameof(transportResolver));
+        }
+
+        public ITransportResolver TransportResolver => m_TransportResolver;
 
         #region IDisposable Members
 
@@ -62,7 +73,7 @@ namespace Lykke.Messaging
             if (m_IsDisposed.WaitOne(0))
                 throw new ObjectDisposedException($"Can not create transport {transportId}. TransportManager instance is disposed");
 
-            var transportInfo = m_TransportInfoResolver.Resolve(transportId);
+            var transportInfo = m_TransportResolver.GetTransport(transportId);
             if (transportInfo == null)
                 throw new ApplicationException($"Transport '{transportId}' is not resolvable");
 
@@ -72,7 +83,9 @@ namespace Lykke.Messaging
 
             var transport = m_Transports.GetOrAdd(
                 transportInfo,
-                new ResolvedTransport(_loggerFactory, transportInfo, () => ProcessTransportFailure(transportInfo), factory));
+                _logFactory == null
+                    ? new ResolvedTransport(_log, transportInfo, () => ProcessTransportFailure(transportInfo), factory)
+                    : new ResolvedTransport(_logFactory, transportInfo, () => ProcessTransportFailure(transportInfo), factory));
 
             return transport;
         }
@@ -126,27 +139,30 @@ namespace Lykke.Messaging
         {
             var result = new ConcurrentDictionary<Endpoint, string>();
 
+            var failedDestinations = new ConcurrentDictionary<Destination, string>();
             ResolvedTransport transport = ResolveTransport(transportId);
-            
-            foreach (var endpoint in endpoints)
+
+            Parallel.ForEach(endpoints, endpoint =>
             {
                 try
                 {
-                    bool verificationResult = transport.VerifyDestination(
+                    bool rerificationResult = transport.VerifyDestination(
                         endpoint.Destination,
                         usage,
                         configureIfRequired,
                         out var dstError);
-                    
-                    result.TryAdd(endpoint, verificationResult ? null : dstError);
+                    result.TryAdd(endpoint, rerificationResult ? null : dstError);
                 }
                 catch (Exception e)
                 {
-                    throw new TransportException(
-                        $"Destination [{endpoint.Destination}] is not properly configured on transport [{transportId}]",
-                        e);
+                    failedDestinations.TryAdd(endpoint.Destination, e.Message);
                 }
-            }
+            });
+
+            if (failedDestinations.Count > 0)
+                throw new TransportException(
+                    $"Destinations {string.Join(", ", failedDestinations.Keys)} are not properly configured on transport {transportId}:{Environment.NewLine}"
+                    + $"{string.Join($",{Environment.NewLine}", failedDestinations.Values)}");
 
             return result;
         }

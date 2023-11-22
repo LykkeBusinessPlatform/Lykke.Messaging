@@ -4,54 +4,56 @@ using System;
 namespace Lykke.Messaging.Contract
 {
     /// <summary>
-	/// Transport-specific destination address
+	/// Endpoint
 	/// </summary>
-	// @atarutin: Taking into account comments on TransportId and SerializationFormat,
-	// there is no distinction between Destination and Endpoint structs, unless
-    // SharedDestination field brings in something valuable. Consider merging types
-    // Endpoint and Destination.
-	public readonly struct Endpoint
+	public struct Endpoint
 	{
-	    /// <summary>
-	    /// The transport identifier
-	    /// </summary>
-	    // @atarutin TODO: probably, the TransportId should be a part of the
-	    // transport, not of the Endpoint
-		public string TransportId { get; }
+	    /// <summary>Gets or sets the transport id.</summary>
+		/// <value>The transport id.</value>
+		public string TransportId { get; set; }
+
+	    /// <summary>Gets or sets the destination.</summary>
+		/// <value>The destination.</value>
+        public Destination Destination { get; set; }
+
+	    /// <summary>Shared destination</summary>
+		public bool SharedDestination { get; set; }
+
+	    /// <summary>Shared destination</summary>
+		public SerializationFormat SerializationFormat { get; set; }
 
 	    /// <summary>
-	    /// The destination
-	    /// </summary>
-        public Destination Destination { get; }
-
-	    /// <summary>
-	    /// ???
-	    /// </summary>
-		public bool SharedDestination { get; }
-
-	    /// <summary>
-	    /// Message serialization format
-	    /// </summary>
-	    // @atarutin TODO: probably, the serialization format should be a part of the
-	    // transport not of the endpoint
-		public SerializationFormat SerializationFormat { get; }
-
+        /// 
+        /// </summary>
         public Endpoint(
             string transportId,
-            Destination destination,
+            string destination,
             bool sharedDestination = false,
             SerializationFormat serializationFormat = SerializationFormat.ProtoBuf)
-	    {
-		    if (string.IsNullOrWhiteSpace(transportId))
-			    throw new ArgumentNullException(nameof(transportId), "TransportId must be specified");
-		    TransportId = transportId;
-
-		    Destination = destination;
-		    SharedDestination = sharedDestination;
+		{
+            TransportId = transportId;
+			Destination = destination ?? throw new ArgumentNullException(nameof(destination));
+			SharedDestination = sharedDestination;
 		    SerializationFormat = serializationFormat;
 		}
 
-        public override string ToString()
+        /// <summary>
+		/// 
+		/// </summary>
+        public Endpoint(
+            string transportId,
+            string publish,
+            string subscribe,
+            bool sharedDestination = false,
+            SerializationFormat serializationFormat = SerializationFormat.ProtoBuf)
+		{
+		    TransportId = transportId;
+			Destination = new Destination {Publish = publish, Subscribe = subscribe};
+			SharedDestination = sharedDestination;
+		    SerializationFormat = serializationFormat;
+		}
+
+	    public override string ToString()
 	    {
 	        return $"[Transport: {TransportId}, Destination: {Destination}]";
 	    }

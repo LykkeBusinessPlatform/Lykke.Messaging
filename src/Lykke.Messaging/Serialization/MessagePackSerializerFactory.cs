@@ -1,22 +1,32 @@
-﻿using System;
-using Microsoft.Extensions.Logging;
+﻿using Common.Log;
+using Lykke.Common.Log;
+using System;
 
 namespace Lykke.Messaging.Serialization
 {
     public class MessagePackSerializerFactory : ISerializerFactory
     {
-        private readonly ILoggerFactory _loggerFactory;
+        private readonly ILog _log;
+        private readonly ILogFactory _logFactory;
 
         public SerializationFormat SerializationFormat => SerializationFormat.MessagePack;
 
-        public MessagePackSerializerFactory(ILoggerFactory loggerFactory)
+        [Obsolete]
+        public MessagePackSerializerFactory(ILog log)
         {
-            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
+            _log = log ?? throw new ArgumentNullException(nameof(log));
+        }
+
+        public MessagePackSerializerFactory(ILogFactory logFactory)
+        {
+            _logFactory = logFactory ?? throw new ArgumentNullException(nameof(logFactory));
         }
 
         public IMessageSerializer<TMessage> Create<TMessage>()
         {
-            return new MessagePackSerializer<TMessage>(_loggerFactory);
+            return _logFactory != null
+                ? new MessagePackSerializer<TMessage>(_logFactory)
+                : new MessagePackSerializer<TMessage>(_log);
         }
 
         public static class Defaults

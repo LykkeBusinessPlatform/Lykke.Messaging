@@ -1,8 +1,9 @@
-﻿using System;
+﻿using Common.Log;
+using Lykke.Common.Log;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using Microsoft.Extensions.Logging;
 
 namespace Lykke.Messaging.Serialization
 {
@@ -12,11 +13,19 @@ namespace Lykke.Messaging.Serialization
         private readonly ReaderWriterLockSlim m_SerializerLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
         private readonly Dictionary<Tuple<SerializationFormat, Type>, object> m_Serializers = new Dictionary<Tuple<SerializationFormat, Type>, object>();
 
-        public SerializationManager(ILoggerFactory loggerFactory)
+        [Obsolete]
+        public SerializationManager(ILog log)
         {
             RegisterSerializerFactory(new JsonSerializerFactory());
-            RegisterSerializerFactory(new ProtobufSerializerFactory(loggerFactory));
-            RegisterSerializerFactory(new MessagePackSerializerFactory(loggerFactory));
+            RegisterSerializerFactory(new ProtobufSerializerFactory(log));
+            RegisterSerializerFactory(new MessagePackSerializerFactory(log));
+        }
+
+        public SerializationManager(ILogFactory logFactory)
+        {
+            RegisterSerializerFactory(new JsonSerializerFactory());
+            RegisterSerializerFactory(new ProtobufSerializerFactory(logFactory));
+            RegisterSerializerFactory(new MessagePackSerializerFactory(logFactory));
         }
 
         #region ISerializationManager Members

@@ -7,9 +7,9 @@ using Castle.MicroKernel;
 using Castle.MicroKernel.Context;
 using Castle.MicroKernel.Facilities;
 using Castle.MicroKernel.Registration;
+using Common.Log;
 using Lykke.Messaging.Configuration;
 using Lykke.Messaging.Contract;
-using Microsoft.Extensions.Logging;
 
 namespace Lykke.Messaging.Castle
 {
@@ -25,7 +25,6 @@ namespace Lykke.Messaging.Castle
         private IMessagingEngine m_MessagingEngine;
         private bool m_IsExplicitConfigurationProvided = false;
         private IEndpointProvider m_EndpointProvider;
-        private ILoggerFactory _loggerFactory;
 
         private IMessagingConfiguration MessagingConfiguration { get; set; }
 
@@ -88,12 +87,6 @@ namespace Lykke.Messaging.Castle
             return this;
         }
 
-        public MessagingFacility WithLoggerFactory(ILoggerFactory loggerFactory)
-        {
-            _loggerFactory = loggerFactory;
-            return this;
-        }
-
         public MessagingFacility VerifyEndpoints(EndpointUsage usage,bool configureIfRequired,params string[] endpoints)
         {
             AddPostInitStep(kernel =>
@@ -118,7 +111,7 @@ namespace Lykke.Messaging.Castle
 
         protected override void Dispose()
         {
-            m_MessagingEngine?.Dispose();
+            m_MessagingEngine.Dispose();
             base.Dispose();
         }
 
@@ -142,8 +135,8 @@ namespace Lykke.Messaging.Castle
             m_EndpointProvider = Kernel.Resolve<IEndpointProvider>("EndpointResolver");
             Kernel.Resolver.AddSubResolver(subDependencyResolver);
 
-            m_MessagingEngine = new MessagingEngine(_loggerFactory, 
-                new TransportInfoResolver(MessagingConfiguration.GetTransports() ?? new Dictionary<string, TransportInfo>(), m_JailStrategies),
+            m_MessagingEngine = new MessagingEngine(new LogToConsole(), 
+                new TransportResolver(MessagingConfiguration.GetTransports() ?? new Dictionary<string, TransportInfo>(), m_JailStrategies),
                 MessagingConfiguration.GetProcessingGroups(),
                 m_TransportFactories.ToArray());
 

@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System;
+using Common.Log;
+using Lykke.Common.Log;
 
 namespace Lykke.Messaging.Serialization
 {
@@ -6,9 +8,15 @@ namespace Lykke.Messaging.Serialization
     {
         private readonly ResilientBinarySerializer<TMessage> _serializer;
 
-        public MessagePackSerializer(ILoggerFactory loggerFactory)
+        [Obsolete("Please, use the overload which consumes ILogFactory")]
+        public MessagePackSerializer(ILog log)
         {
-            _serializer = new ResilientBinarySerializer<TMessage>(loggerFactory, SerializationFormat.MessagePack);
+            _serializer = new ResilientBinarySerializer<TMessage>(log, SerializationFormat.MessagePack);
+        }
+
+        public MessagePackSerializer(ILogFactory logFactory)
+        {
+            _serializer = new ResilientBinarySerializer<TMessage>(logFactory, SerializationFormat.MessagePack);
         }
 
         public byte[] Serialize(TMessage message)
