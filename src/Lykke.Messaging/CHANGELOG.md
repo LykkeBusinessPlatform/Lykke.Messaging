@@ -1,4 +1,9 @@
-## [[tbd]] - Messaging [[tbd]] (2023-08-16)
+## [[tbd]] - Messaging [[tbd]] (2023-11-23)
+
+### Removed
+- Downgraded all improvements to connections and sessions management  
+
+## 11.0.5 - Messaging 11.0.5 (2023-08-16)
 
 ### Changed
 - Update nuget publication workflow
