@@ -1,4 +1,4 @@
-## [[tbd]] - Messaging [[tbd]] (2023-11-23)
+## 12.0.0 - Messaging 12.0.0 (2023-11-23)
 
 ### Removed
 - Downgraded all improvements to connections and sessions management  
