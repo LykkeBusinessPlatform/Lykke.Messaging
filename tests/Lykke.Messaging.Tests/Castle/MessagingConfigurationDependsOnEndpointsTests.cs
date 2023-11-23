@@ -21,11 +21,11 @@ namespace Lykke.Messaging.Tests.Castle
         [SetUp]
         public void SetUp()
         {
-            m_Endpoint1 = new Endpoint("transport-id-1", new Destination("destination-1"));
-            m_Endpoint2 = new Endpoint("transport-id-2", new Destination("destination-2"));
-            m_Endpoint3 = new Endpoint("transport-id-3", new Destination("destination-3"));
-            m_Endpoint4 = new Endpoint("transport-id-4", new Destination("destination-4"));
-            m_Endpoint5 = new Endpoint("transport-id-5", new Destination("destination-5"));
+            m_Endpoint1 = new Endpoint("transport-id-1", "destination-1");
+            m_Endpoint2 = new Endpoint("transport-id-2", "destination-2");
+            m_Endpoint3 = new Endpoint("transport-id-3", "destination-3");
+            m_Endpoint4 = new Endpoint("transport-id-4", "destination-4");
+            m_Endpoint5 = new Endpoint("transport-id-5", "destination-5");
             var messagingConfiguration = new MockMessagingConfiguration(
                 new Dictionary<string, TransportInfo>(), 
                 new Dictionary<string, Endpoint>
@@ -65,7 +65,7 @@ namespace Lykke.Messaging.Tests.Castle
         [Test]
         public void EndpointResolveByExplicitEndpointParameterNameTest()
         {
-            var endpoint = new Endpoint(transportId: "custom-transport-id", destination: new Destination("custom-destination"));
+            var endpoint = new Endpoint(transportId: "custom-transport-id", destination: "custom-destination");
 
             m_Container.Register(Component.For<EndpointDependTestClass1>().WithEndpoints(new { endpoint1 = endpoint }));
             var test1 = m_Container.Resolve<EndpointDependTestClass1>();
@@ -112,7 +112,7 @@ namespace Lykke.Messaging.Tests.Castle
         [Test]
         public void EndpointResolveByTwoDifferentOneOverridenAndExplicitParameterNameTest()
         {
-            var endpoint = new Endpoint(transportId: "custom-transport-id", destination: new Destination("custom-destination"));
+            var endpoint = new Endpoint(transportId: "custom-transport-id", destination: "custom-destination");
 
             m_Container.Register(Component.For<EndpointDependTestClass2>().WithEndpoints(new { endpoint1 = "endpoint4", endpoint2 = endpoint }));
 

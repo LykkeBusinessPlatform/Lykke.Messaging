@@ -1,22 +1,40 @@
 ﻿using System;
 using RabbitMQ.Client;
-using Microsoft.Extensions.Logging;
+using Common.Log;
+using Lykke.Common.Log;
 
 namespace Lykke.Messaging.RabbitMq
 {
-    public class Consumer : DefaultBasicConsumer, IDisposable
+    internal class Consumer : DefaultBasicConsumer, IDisposable
     {
-        private readonly Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> _callback;
-        private readonly ILogger<Consumer> _logger;
+        private readonly ILog _log;
+        private readonly Action<IBasicProperties, byte[], Action<bool>> m_Callback;
 
+        [Obsolete]
         public Consumer(
+            ILog log,
             IModel model,
-            Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> callback,
-            ILoggerFactory loggerFactory)
+            Action<IBasicProperties, byte[], Action<bool>> callback)
             : base(model)
         {
-            _callback = callback ?? throw new ArgumentNullException(nameof(callback));
-            _logger = loggerFactory?.CreateLogger<Consumer>() ?? throw new ArgumentNullException(nameof(loggerFactory));
+            _log = log;
+            m_Callback = callback ?? throw new ArgumentNullException("callback");
+        }
+
+        public Consumer(
+            ILogFactory logFactory,
+            IModel model,
+            Action<IBasicProperties, byte[], Action<bool>> callback)
+            
+            : base(model)
+        {
+            if (logFactory == null)
+            {
+                throw new ArgumentNullException(nameof(logFactory));
+            }
+
+            _log = logFactory.CreateLog(this);
+            m_Callback = callback ?? throw new ArgumentNullException(nameof(callback));
         }
 
         public override void HandleBasicDeliver(
@@ -26,16 +44,11 @@ namespace Lykke.Messaging.RabbitMq
             string exchange,
             string routingKey,
             IBasicProperties properties,
-            ReadOnlyMemory<byte> body)
+            byte[] body)
         {
-            // make a copy of the body, as it can be released any time
-            // https://www.rabbitmq.com/dotnet-api-guide.html#consuming-async
-            var bodyCopy = new byte[body.Length];
-            Buffer.BlockCopy(body.ToArray(), 0, bodyCopy, 0, body.Length);
-
             try
             {
-                _callback(properties, new ReadOnlyMemory<byte>(bodyCopy), ack =>
+                m_Callback(properties, body, ack =>
                 {
                     if (ack)
                         Model.BasicAck(deliveryTag, false);
@@ -45,43 +58,26 @@ namespace Lykke.Messaging.RabbitMq
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "{Method}: error", nameof(HandleBasicDeliver));
-                Model.BasicNack(deliveryTag, false, true);
+                _log.WriteError(nameof(Consumer), nameof(HandleBasicDeliver), e);
             }
-        }
-
-        # region Dispose pattern
-        
-        private bool _disposed = false;
-
-        protected void Dispose(bool disposing)
-        {
-            if (_disposed) return;
-            
-            if (disposing && IsRunning)
-            {
-                try
-                {
-                    foreach (var consumerTag in ConsumerTags)
-                    {
-                        Model.BasicCancel(consumerTag);
-                    }
-                }
-                catch (Exception e)
-                {
-                    _logger.LogError(e, "{Method}: error", nameof(Dispose));
-                }
-            }
-
-            _disposed = true;
         }
 
         public void Dispose()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
+            lock (Model)
+            {
+                if (Model.IsOpen)
+                {
+                    try
+                    {
+                        Model.BasicCancel(ConsumerTag);
+                    }
+                    catch (Exception e)
+                    {
+                        _log.WriteError(nameof(Consumer), nameof(Dispose), e);
+                    }
+                }
+            }
         }
-        
-        # endregion
     }
 }

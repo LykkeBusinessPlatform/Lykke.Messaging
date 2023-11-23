@@ -1,46 +1,20 @@
-﻿using System;
-
-namespace Lykke.Messaging.Contract
+﻿namespace Lykke.Messaging.Contract
 {
-    /// <summary>
-    /// Transport-agnostic destination address.
-    /// Keeps information about the destination address for publishing and/or
-    /// subscribing.
-    /// Depending on the underlying transport the address can differ depending
-    /// on its usage for publishing or subscribing.
-    /// By default the address is the same for publishing and subscribing.
-    /// </summary>
-    public readonly struct Destination
+    public struct Destination
     {
-        /// <summary>
-        /// Address used for publishing.
-        /// </summary>
-        public string Publish { get; }
-        
-        /// <summary>
-        /// Address used for subscribing.
-        /// </summary>
-        public string Subscribe { get; }
+        public string Publish { get; set; }
+        public string Subscribe { get; set; }
 
-        public Destination(string publish, string subscribe)
+        public static implicit operator Destination(string destination)
         {
-            if (string.IsNullOrWhiteSpace(publish)
-                && string.IsNullOrWhiteSpace(subscribe))
+            return new Destination
             {
-                throw new ArgumentNullException(nameof(publish),
-                    "Both, publish and subscribe addresses cannot be empty");
-
-            }
-
-            Publish = publish;
-            Subscribe = subscribe;
+                Publish = destination,
+                Subscribe = destination
+            };
         }
 
-        public Destination(string address):this(address, address)
-        {
-        }
-
-        private bool Equals(Destination other)
+        public bool Equals(Destination other)
         {
             return string.Equals(Publish, other.Publish) && string.Equals(Subscribe, other.Subscribe);
         }
@@ -48,15 +22,14 @@ namespace Lykke.Messaging.Contract
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
-            return obj is Destination destination && Equals(destination);
+            return obj is Destination && Equals((Destination) obj);
         }
 
         public override int GetHashCode()
         {
             unchecked
             {
-                return ((Publish != null ? Publish.GetHashCode() : 0) * 397) ^
-                       (Subscribe != null ? Subscribe.GetHashCode() : 0);
+                return ((Publish != null ? Publish.GetHashCode() : 0)*397) ^ (Subscribe != null ? Subscribe.GetHashCode() : 0);
             }
         }
 
@@ -72,9 +45,9 @@ namespace Lykke.Messaging.Contract
 
         public override string ToString()
         {
-            return Subscribe == Publish 
-                ? $"[{Subscribe}]" 
-                : $"[s:{Subscribe}, p:{Publish}]";
+            if (Subscribe == Publish)
+                return "["+Subscribe+"]";
+            return $"[s:{Subscribe}, p:{Publish}]";
         }
     }
 }

@@ -1,4 +1,4 @@
-## 6.0.9 - Rabbit MQ 6.0.9 (2023-08-16)
+## [[tbd]] - Rabbit MQ [[tbd]] (2023-08-16)
 
 ### Changed
 - Updated nuget publication workflow

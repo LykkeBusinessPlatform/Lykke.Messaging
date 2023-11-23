@@ -1,215 +1,114 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Reactive.Disposables;
 using System.Text;
 using RabbitMQ.Client;
+using RabbitMQ.Client.Exceptions;
+using Common.Log;
+using Lykke.Common.Log;
 using Lykke.Messaging.Contract;
-using Lykke.Messaging.RabbitMq.Exceptions;
-using Lykke.Messaging.RabbitMq.Retry;
 using Lykke.Messaging.Transports;
-using Microsoft.Extensions.Logging;
-using RabbitMQ.Client.Events;
 
 namespace Lykke.Messaging.RabbitMq
 {
     internal class RabbitMqSession : IMessagingSession
     {
+        private readonly ILog _log;
+        private readonly IConnection m_Connection;
+        private readonly IModel m_Model;
         private readonly CompositeDisposable m_Subscriptions = new CompositeDisposable();
-        private readonly Dictionary<string, DefaultBasicConsumer> _consumers =
-            new Dictionary<string, DefaultBasicConsumer>();
-        private readonly IRetryPolicyProvider _retryPolicyProvider;
-        private readonly bool _publisherConfirms;
-        private readonly ILoggerFactory _loggerFactory;
-        private readonly ILogger<RabbitMqSession> _logger;
-        private readonly IAutorecoveringConnection _connection;
-        private readonly object _lockObject = new object();
-        
-        private IModel _channel;
+        private readonly Dictionary<string, DefaultBasicConsumer> m_Consumers = new Dictionary<string, DefaultBasicConsumer>();
+        private readonly Action<RabbitMqSession, PublicationAddress, Exception> m_OnSendFail;
+
+        private bool m_ConfirmedSending = false;
+        private readonly ILogFactory _logFactory;
+
+        [Obsolete]
+        public RabbitMqSession(
+            ILog log,
+            IConnection connection,
+            bool confirmedSending = false,
+            Action<RabbitMqSession, PublicationAddress, Exception> onSendFail = null)
+        {
+            _log = log;
+            m_OnSendFail = onSendFail??((s,d,e) => { });
+            m_Connection = connection;
+            m_Model = m_Connection.CreateModel();
+            if(confirmedSending)
+                m_Model.ConfirmSelect();
+            //NOTE: looks like publish confirm is required for guaranteed delivery
+            //smth like:
+            //  m_Model.ConfirmSelect();
+            //and publish like this:
+            //  m_Model.BasicPublish()
+            //  m_Model.WaitForConfirmsOrDie();
+            //it will wait for ack from server and throw exception if message failed to persist ons srever side (e.g. broker reboot)
+            //more info here: http://rianjs.net/2013/12/publisher-confirms-with-rabbitmq-and-c-sharp
+
+            m_Model.BasicQos(0, 300, false);
+            connection.ConnectionShutdown += (connection1, reason) =>
+                {
+                    lock (m_Consumers)
+                    {
+                        foreach (IDisposable consumer in m_Consumers.Values)
+                        {
+                            consumer.Dispose();
+                        }
+                    }
+                };
+        }
 
         public RabbitMqSession(
-            ILoggerFactory loggerFactory,
-            IAutorecoveringConnection connection,
-            IRetryPolicyProvider retryPolicyProvider,
-            bool publisherConfirms = false)
+            ILogFactory logFactory,
+            IConnection connection,
+            bool confirmedSending = false,
+            Action<RabbitMqSession, PublicationAddress, Exception> onSendFail = null)
         {
-            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
-            _retryPolicyProvider = retryPolicyProvider ?? throw new ArgumentNullException(nameof(retryPolicyProvider));
-            _logger = loggerFactory.CreateLogger<RabbitMqSession>();
-            _connection = connection ?? throw new ArgumentNullException(nameof(connection));
-            _publisherConfirms = publisherConfirms;
-        }
 
-        /// <summary>
-        /// Creates channel if it was not created yet, executes requested
-        /// operation and returns result. If operation fails, the channel might
-        /// be closed depending on the failure type. In case of recoverable
-        /// failure the exception is wrapped into RecoverableFailureException,
-        /// consumer can unharmfully retry. It is guaranteed when operation executes
-        /// the channel is initialized and ready to use.
-        /// </summary>
-        /// <param name="operation"></param>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-        /// <exception cref="RecoverableFailureException">
-        /// When potentially recoverable failure happened
-        /// </exception>
-        private T ExecuteChannelOperation<T>(Func<T> operation)
-        {
-            try
+            _logFactory = logFactory ?? throw new ArgumentNullException(nameof(logFactory));
+            _log = logFactory.CreateLog(this);
+
+            m_OnSendFail = onSendFail ?? ((s, d, e) => { });
+            m_Connection = connection;
+            m_Model = m_Connection.CreateModel();
+            if (confirmedSending)
+                m_Model.ConfirmSelect();
+            //NOTE: looks like publish confirm is required for guaranteed delivery
+            //smth like:
+            //  m_Model.ConfirmSelect();
+            //and publish like this:
+            //  m_Model.BasicPublish()
+            //  m_Model.WaitForConfirmsOrDie();
+            //it will wait for ack from server and throw exception if message failed to persist ons srever side (e.g. broker reboot)
+            //more info here: http://rianjs.net/2013/12/publisher-confirms-with-rabbitmq-and-c-sharp
+
+            m_Model.BasicQos(0, 300, false);
+            connection.ConnectionShutdown += (connection1, reason) =>
             {
-                EnsureChannel();
-                
-                lock (_lockObject)
+                lock (m_Consumers)
                 {
-                    return operation();
+                    foreach (var consumer in m_Consumers.Values.OfType<IDisposable>())
+                    {
+                        consumer.Dispose();
+                    }
                 }
-            }
-            catch (Exception e)
-            {
-                var failureActions = e.DecideOnFailureActions();
-                if (failureActions.HasFlag(FailureActions.CloseChannel))
-                    CloseChannel();
-                
-                if (failureActions.HasFlag(FailureActions.Throw))
-                    throw;
-
-                if (failureActions.HasFlag(FailureActions.Retry))
-                    throw new RecoverableFailureException(e);
-
-                throw new InvalidOperationException(
-                    "Looks like it was decided to just close the RabbitMQ channel on failure. " +
-                    "Most of the time it should be combined with retry or rethrow.");
-            }
+            };
         }
 
-        /// <summary>
-        /// Proxy for <see cref="ExecuteChannelOperation{T}"/> that accepts Action
-        /// </summary>
-        /// <param name="operation"></param>
-        private void ExecuteChannelOperation(Action operation)
+        public Destination CreateTemporaryDestination()
         {
-            ExecuteChannelOperation(() =>
-            {
-                operation();
-                return 0;
-            });
+            var queueName = m_Model.QueueDeclare().QueueName;
+            return new Destination { Subscribe = queueName, Publish = new PublicationAddress("direct", "", queueName).ToString() };
         }
 
-        private void CloseChannel()
+        public void Send(string destination, BinaryMessage message, int ttl)
         {
-            lock (_lockObject)
-            {
-                if (_channel == null)
-                    return;
-                
-                _channel.Close();
-
-                if (_channel is IRecoverable recoverable)
-                    recoverable.Recovery -= OnChannelRecovered;
-                _channel.ModelShutdown -= OnChannelShutdown;
-                _channel.BasicReturn -= OnReturn;
-                if (_publisherConfirms)
+            Send(destination, message, properties =>
                 {
-                    _channel.BasicAcks -= OnAck;
-                    _channel.BasicNacks -= OnNack;
-                }
-
-                _channel.Dispose();
-                _channel = null;
-            }
-        }
-
-        private IModel CreateChannel()
-        {
-            var channel = _connection.CreateModel();
-
-            if (_publisherConfirms)
-            {
-                channel.ConfirmSelect();
-                channel.BasicAcks += OnAck;
-                channel.BasicNacks += OnNack;
-            }
-            
-            channel.BasicReturn += OnReturn;
-            channel.ModelShutdown += OnChannelShutdown;
-            
-            if (channel is IRecoverable recoverable)
-                recoverable.Recovery += OnChannelRecovered;
-
-            channel.BasicQos(0, 300, false);
-            
-            return channel;
-        }
-        
-        private IModel EnsureChannel()
-        {
-            lock (_lockObject)
-            {
-                _channel ??= CreateChannel();
-            }
-
-            return _channel;
-        }
-        
-        private void OnAck(object? sender, BasicAckEventArgs args)
-        {
-            _logger.LogDebug("Message {DeliveryTag} was acknowledged", args.DeliveryTag);
-        }
-        
-        private void OnNack(object? sender, BasicNackEventArgs args)
-        {
-            _logger.LogWarning("Message {DeliveryTag} was not acknowledged", args.DeliveryTag);
-        }
-        
-        private void OnReturn(object? sender, BasicReturnEventArgs args)
-        {
-            // todo: handle unroutable message, otherwise it will be lost, potentially
-            // specific exception can be fired here and consumers can handle it
-            _logger.LogError(
-                "Message (id={MessageId}) was returned with error code {ReplyCode} and text [{ReplyText}]. Initially, it was published on exchange {Exchange} with routing key {RoutingKey}.",
-                args.BasicProperties?.MessageId, args.ReplyCode, args.ReplyText, args.Exchange, args.RoutingKey);
-        }
-        
-        private void OnChannelShutdown(object? sender, ShutdownEventArgs e)
-        {
-            // todo: handle channel shutdown
-            _logger.LogError(e.Cause as Exception, "Channel was shutdown: {Code} - {Reason}", e.ReplyCode, e.ReplyText);
-        }
-        
-        private void OnChannelRecovered(object? sender, EventArgs e)
-        {
-            _logger.LogInformation("Channel {Number} was recovered", (sender as IModel)?.ChannelNumber);
-        }
-        
-        private void Send(PublicationAddress destination,
-            BinaryMessage message,
-            Action<IBasicProperties> tuneMessage = null)
-        {
-            var properties = ExecuteChannelOperationWithRetry(() => _channel.CreateBasicProperties());
-
-            properties.Headers = new Dictionary<string, object>();
-            properties.DeliveryMode = 2; //persistent
-            foreach (var header in message.Headers)
-            {
-                properties.Headers[header.Key] = header.Value;
-            }
-
-            if (message.Type != null)
-                properties.Type = message.Type;
-            tuneMessage?.Invoke(properties);
-
-            properties.Headers.Add("initialRoute", destination.ToString());
-            ExecuteChannelOperationWithRetry(() =>
-            {
-                _channel.BasicPublish(destination.ExchangeName,
-                    destination.RoutingKey,
-                    true,
-                    properties,
-                    message.Bytes);
-                if (_publisherConfirms)
-                    _channel.WaitForConfirmsOrDie();
-            });
+                    if (ttl > 0) properties.Expiration = ttl.ToString(CultureInfo.InvariantCulture);
+                });
         }
 
         private void Send(string destination, BinaryMessage message, Action<IBasicProperties> tuneMessage = null)
@@ -217,108 +116,43 @@ namespace Lykke.Messaging.RabbitMq
             var publicationAddress = PublicationAddress.Parse(destination) ?? new PublicationAddress("direct", destination, "");
             Send(publicationAddress, message, tuneMessage);
         }
-        
-        private BinaryMessage ToBinaryMessage(IBasicProperties properties, ReadOnlyMemory<byte> bytes)
+
+        private void Send(PublicationAddress destination, BinaryMessage message, Action<IBasicProperties> tuneMessage = null)
         {
-            var binaryMessage = new BinaryMessage {Bytes = bytes.ToArray(), Type = properties.Type};
-            if (properties.Headers != null)
+            try
             {
-                foreach (var header in properties.Headers)
+                var properties = m_Model.CreateBasicProperties();
+
+                properties.Headers = new Dictionary<string, object>();
+                properties.DeliveryMode = 2; //persistent
+                foreach (var header in message.Headers)
                 {
-                    var value = header.Value as byte[];
-                    binaryMessage.Headers[header.Key] = value == null ? null : Encoding.UTF8.GetString(value);
+                    properties.Headers[header.Key] = header.Value;
+                }
+                if (message.Type != null)
+                    properties.Type = message.Type;
+                tuneMessage?.Invoke(properties);
+
+                properties.Headers.Add("initialRoute", destination.ToString());
+                lock (m_Model)
+                {
+                    m_Model.BasicPublish(destination.ExchangeName, destination.RoutingKey, true, properties, message.Bytes);
+                    if (m_ConfirmedSending)
+                        m_Model.WaitForConfirmsOrDie();
                 }
             }
-            return binaryMessage;
-        }
-
-        private IDisposable Subscribe(string destination, Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> callback, string messageType)
-        {
-            lock (_consumers)
+            catch (AlreadyClosedException e)
             {
-                DefaultBasicConsumer basicConsumer;
-                _consumers.TryGetValue(destination, out basicConsumer);
-                if (messageType == null)
-                {
-                    if (basicConsumer is SharedConsumer)
-                        throw new InvalidOperationException("Attempt to subscribe for shared destination without specifying message type. It should be a bug in MessagingEngine");
-                    if (basicConsumer != null)
-                        throw new InvalidOperationException("Attempt to subscribe for same destination twice.");
-                    return SubscribeNonShared(destination, callback);
-                }
-
-                if (basicConsumer is Consumer)
-                    throw new InvalidOperationException("Attempt to subscribe for non shared destination with specific message type. It should be a bug in MessagingEngine");
-
-                return SubscribeShared(
-                    destination,
-                    callback,
-                    messageType,
-                    basicConsumer as SharedConsumer);
+                m_OnSendFail(this,destination,e);
+                throw;
             }
-        }
-
-        private IDisposable SubscribeShared(
-            string destination,
-            Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> callback,
-            string messageType,
-            SharedConsumer consumer)
-        {
-            if (consumer == null)
-            {
-                consumer = new SharedConsumer(_loggerFactory, EnsureChannel());
-                _consumers[destination] = consumer;
-                
-                ExecuteChannelOperationWithRetry(() => _channel.BasicConsume(destination, false, consumer));
-            }
-
-            consumer.AddCallback(callback, messageType);
-
-            return Disposable.Create(() =>
-                {
-                    lock (_consumers)
-                    {
-                        if (!consumer.RemoveCallback(messageType))
-                            _consumers.Remove(destination);
-                    }
-                });
-        }
-
-        private IDisposable SubscribeNonShared(string destination,
-            Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> callback)
-        {
-            var consumer = new Consumer(EnsureChannel(), callback, _loggerFactory);
-            _consumers[destination] = consumer;
-
-            ExecuteChannelOperationWithRetry(() => _channel.BasicConsume(destination, false, consumer));
-            
-            return Disposable.Create(() =>
-            {
-                lock (_consumers)
-                {
-                    consumer.Dispose();
-                    _consumers.Remove(destination);
-                }
-            });
-        }
-
-        public Destination CreateTemporaryDestination()
-        {
-            var queueName = ExecuteChannelOperationWithRetry(() => _channel.QueueDeclare()).QueueName;
-            return new Destination(new PublicationAddress("direct", "", queueName).ToString(), queueName);
-        }
-
-        public void Send(string destination, BinaryMessage message, int ttl)
-        {
-            Send(destination, message, properties =>
-            {
-                if (ttl > 0) properties.Expiration = ttl.ToString(CultureInfo.InvariantCulture);
-            });
         }
 
         public RequestHandle SendRequest(string destination, BinaryMessage message, Action<BinaryMessage> callback)
         {
-            string queue = ExecuteChannelOperationWithRetry(() => _channel.QueueDeclare()).QueueName;
+            string queue;
+            lock(m_Model)
+                queue = m_Model.QueueDeclare().QueueName;
             var request = new RequestHandle(callback, () => { }, cb => Subscribe(queue, (binaryMessage, acknowledge) => { 
                 cb(binaryMessage);
                 acknowledge(true);
@@ -354,44 +188,127 @@ namespace Lykke.Messaging.RabbitMq
         {
             return Subscribe(destination, (properties, bytes, acknowledge) => callback(ToBinaryMessage(properties, bytes), acknowledge), messageType);
         }
-        
-        /// <summary>
-        /// The operation will be wrapped by retry policy. If the operation fails,
-        /// it potentially might be retried if possible. The channel recovery,
-        /// if required, will be handled transparently for the consumer.
-        /// The generic version of the method.
-        /// </summary>
-        /// <param name="operation">The delegate to execute</param>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-        private T ExecuteChannelOperationWithRetry<T>(Func<T> operation)
+
+        private BinaryMessage ToBinaryMessage(IBasicProperties properties, byte[] bytes)
         {
-            return _retryPolicyProvider.RegularPolicy.Execute(() => ExecuteChannelOperation(operation));
+            var binaryMessage = new BinaryMessage {Bytes = bytes, Type = properties.Type};
+            if (properties.Headers != null)
+            {
+                foreach (var header in properties.Headers)
+                {
+                    var value = header.Value as byte[];
+                    binaryMessage.Headers[header.Key] = value == null ? null : Encoding.UTF8.GetString(value);
+                }
+            }
+            return binaryMessage;
         }
 
-        /// <summary>
-        /// The operation will be wrapped by retry policy. If the operation fails,
-        /// it potentially might be retried if possible. The channel recovery,
-        /// if required, will be handled transparently for the consumer.
-        /// </summary>
-        /// <param name="operation"></param>
-        private void ExecuteChannelOperationWithRetry(Action operation)
+        private IDisposable Subscribe(string destination, Action<IBasicProperties, byte[], Action<bool>> callback, string messageType)
         {
-            _retryPolicyProvider.RegularPolicy.Execute(() => ExecuteChannelOperation(operation));
+            lock (m_Consumers)
+            {
+                DefaultBasicConsumer basicConsumer;
+                m_Consumers.TryGetValue(destination, out basicConsumer);
+                if (messageType == null)
+                {
+                    if (basicConsumer is SharedConsumer)
+                        throw new InvalidOperationException("Attempt to subscribe for shared destination without specifying message type. It should be a bug in MessagingEngine");
+                    if (basicConsumer != null)
+                        throw new InvalidOperationException("Attempt to subscribe for same destination twice.");
+                    return SubscribeNonShared(destination, callback);
+                }
+
+                if (basicConsumer is Consumer)
+                    throw new InvalidOperationException("Attempt to subscribe for non shared destination with specific message type. It should be a bug in MessagingEngine");
+
+                return SubscribeShared(
+                    destination,
+                    callback,
+                    messageType,
+                    basicConsumer as SharedConsumer);
+            }
+        }
+
+        private IDisposable SubscribeShared(
+            string destination,
+            Action<IBasicProperties, byte[], Action<bool>> callback,
+            string messageType,
+            SharedConsumer consumer)
+        {
+            if (consumer == null)
+            {
+                consumer = _logFactory == null
+                    ? new SharedConsumer(_log, m_Model)
+                    : new SharedConsumer(_logFactory, m_Model);
+                m_Consumers[destination] = consumer;
+                lock (m_Model)
+                    m_Model.BasicConsume(destination, false, consumer);
+            }
+
+            consumer.AddCallback(callback, messageType);
+
+            return Disposable.Create(() =>
+                {
+                    lock (m_Consumers)
+                    {
+                        if (!consumer.RemoveCallback(messageType))
+                            m_Consumers.Remove(destination);
+                    }
+                });
+        }
+
+        private IDisposable SubscribeNonShared(string destination, Action<IBasicProperties, byte[], Action<bool>> callback)
+        {
+            var consumer = _logFactory == null 
+                ? new Consumer(_log, m_Model, callback)
+                : new Consumer(_logFactory, m_Model, callback);
+
+            lock (m_Model)
+                m_Model.BasicConsume(destination, false, consumer);
+            m_Consumers[destination] = consumer;
+            // ReSharper disable ImplicitlyCapturedClosure
+            return Disposable.Create(() =>
+                {
+                    lock (m_Consumers)
+                    {
+                        consumer.Dispose();
+                        m_Consumers.Remove(destination);
+                    }
+                });
+            // ReSharper restore ImplicitlyCapturedClosure
         }
 
         public void Dispose()
         {
-            lock (_consumers)
+            lock (m_Consumers)
             {
-                foreach (var c in _consumers.Values)
+                foreach (IDisposable consumer in m_Consumers.Values)
                 {
-                    if (c is IDisposable consumer)
-                        consumer.Dispose();
+                    consumer.Dispose();
                 }
             }
-            
-            CloseChannel();
+            lock (m_Model)
+            {
+                try
+                {
+                    m_Model.Close(200, "Goodbye");
+                    m_Model.Dispose();
+                }
+                catch (Exception e)
+                {
+                    _log.WriteError(nameof(RabbitMqSession), nameof(Dispose), e);
+                }
+            }
+
+            try
+            {
+                m_Connection.Close();
+                m_Connection.Dispose();
+            }
+            catch (Exception e)
+            {
+                _log.WriteError(nameof(RabbitMqSession), nameof(Dispose), e);
+            }
         }
     }
 }

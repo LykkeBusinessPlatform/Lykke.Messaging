@@ -1,9 +1,10 @@
-﻿using ProtoBuf;
+﻿using Common.Log;
+using Lykke.Common.Log;
+using ProtoBuf;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Microsoft.Extensions.Logging;
 
 namespace Lykke.Messaging.Serialization
 {
@@ -17,7 +18,8 @@ namespace Lykke.Messaging.Serialization
     {
         #region Fields
 
-        private readonly ILogger<ResilientBinarySerializer<TMessage>> _logger;
+        private readonly ILog _log;
+
         private readonly List<SerializationFormat> _formatPriorityList = new List<SerializationFormat>
         {
             SerializationFormat.MessagePack,
@@ -35,11 +37,19 @@ namespace Lykke.Messaging.Serialization
 
         #region Construction
 
-        public ResilientBinarySerializer(ILoggerFactory loggerFactory, SerializationFormat nativeFormat)
+        [Obsolete("Please, use the overload which consumes ILogFactory")]
+        public ResilientBinarySerializer(ILog log, SerializationFormat nativeFormat)
         {
-            if (loggerFactory == null)
-                throw new ArgumentNullException(nameof(loggerFactory));
-            _logger = loggerFactory.CreateLogger<ResilientBinarySerializer<TMessage>>();
+            _log = log ?? throw new ArgumentNullException(nameof(log));
+
+            ApplyNativeSerializationFormat(nativeFormat);
+        }
+
+        public ResilientBinarySerializer(ILogFactory logFactory, SerializationFormat nativeFormat)
+        {
+            if (logFactory == null)
+                throw new ArgumentNullException(nameof(logFactory));
+            _log = logFactory.CreateLog(this);
 
             ApplyNativeSerializationFormat(nativeFormat);
         }
@@ -125,9 +135,7 @@ namespace Lykke.Messaging.Serialization
                 }
                 catch (Exception ex) when (fmt != _formatPriorityList.Last())
                 {
-                    _logger.LogWarning(ex, "{Method}: Unable to deserialize the message using {SerializationFormat} formatter. Will try other(s).", 
-                        nameof(Deserialize),
-                        fmt);
+                    _log.WriteWarning(nameof(Deserialize), message, $"Unable to deserialize the message using {fmt} formatter. Will try other(s).", ex);
                 }
                 // Otherwise, we give up and propagate the exception higher.
             }

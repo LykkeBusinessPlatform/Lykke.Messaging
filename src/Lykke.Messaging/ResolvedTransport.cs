@@ -2,10 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Common.Log;
+using Lykke.Common.Log;
 using Lykke.Messaging.Contract;
 using Lykke.Messaging.Transports;
 using Lykke.Messaging.Utils;
-using Microsoft.Extensions.Logging;
 
 namespace Lykke.Messaging
 {
@@ -14,9 +15,10 @@ namespace Lykke.Messaging
         private readonly List<string> m_KnownIds = new List<string>();
         private readonly TransportInfo m_TransportInfo;
         private readonly Action m_ProcessTransportFailure;
+        private readonly ILog _log;
         private readonly ITransportFactory m_Factory;
         private readonly List<MessagingSessionWrapper> m_MessagingSessions = new List<MessagingSessionWrapper>();
-        private readonly ILoggerFactory _loggerFactory;
+        private readonly ILogFactory _logFactory;
 
         internal MessagingSessionWrapper[] Sessions => m_MessagingSessions.ToArray();
 
@@ -24,13 +26,28 @@ namespace Lykke.Messaging
 
         public IEnumerable<string> KnownIds => m_KnownIds.ToArray();
 
+        [Obsolete]
         public ResolvedTransport(
-            ILoggerFactory loggerFactory,
+            ILog log,
             TransportInfo transportInfo,
             Action processTransportFailure,
             ITransportFactory factory)
         {
-            _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
+            _log = log;
+            m_Factory = factory;
+            m_ProcessTransportFailure = processTransportFailure;
+            m_TransportInfo = transportInfo;
+
+            Transport = m_Factory.Create(_log, m_TransportInfo, Helper.CallOnlyOnce(ProcessTransportFailure));
+        }
+
+        public ResolvedTransport(
+            ILogFactory logFactory,
+            TransportInfo transportInfo,
+            Action processTransportFailure,
+            ITransportFactory factory)
+        {
+            _logFactory = logFactory ?? throw new ArgumentNullException(nameof(logFactory));
             m_Factory = factory;
             m_ProcessTransportFailure = processTransportFailure;
             m_TransportInfo = transportInfo;
@@ -60,9 +77,12 @@ namespace Lykke.Messaging
 
                 if (messagingSession == null)
                 {
-                    messagingSession = new MessagingSessionWrapper(_loggerFactory, endpoint.TransportId, name);
+                    messagingSession = _logFactory == null
+                        ? new MessagingSessionWrapper(_log, endpoint.TransportId, name)
+                        : new MessagingSessionWrapper(_logFactory, endpoint.TransportId, name);
 
-                    messagingSession.SetSession(transport.CreateSession(displayName: Helper.BuildSessionDisplayName()));
+                    messagingSession.SetSession(
+                        transport.CreateSession(Helper.CallOnlyOnce(() => ProcessSessionFailure(messagingSession)), endpoint.Destination));
                     m_MessagingSessions.Add(messagingSession);
                 }
             }

@@ -10,8 +10,6 @@ using Lykke.Messaging.Configuration;
 using Lykke.Messaging.Contract;
 using Lykke.Messaging.InMemory;
 using Lykke.Messaging.Serialization;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
 
 namespace Lykke.Messaging.Tests.Castle
@@ -24,13 +22,12 @@ namespace Lykke.Messaging.Tests.Castle
         private IMessagingConfiguration m_MessagingConfiguration;
         private TransportInfo m_Transport1;
         private TransportInfo m_Transport2;
-        private ILoggerFactory _loggerFactory = NullLoggerFactory.Instance;
 
         [SetUp]
         public void SetUp()
         {
-            m_Endpoint1 = new Endpoint("transport-id-1", new Destination("first-destination"), serializationFormat: SerializationFormat.Json);
-            m_Endpoint2 = new Endpoint("transport-id-2", new Destination("second-destination"), serializationFormat: SerializationFormat.Json);
+            m_Endpoint1 = new Endpoint("transport-id-1", "first-destination", serializationFormat: SerializationFormat.Json);
+            m_Endpoint2 = new Endpoint("transport-id-2", "second-destination", serializationFormat: SerializationFormat.Json);
             m_Transport1 = new TransportInfo("transport-1", "login1", "pwd1", "None", "InMemory");
             m_Transport2 = new TransportInfo("transport-2", "login2", "pwd1", "None", "InMemory");
             m_MessagingConfiguration = new MockMessagingConfiguration(
@@ -52,12 +49,10 @@ namespace Lykke.Messaging.Tests.Castle
             using (IWindsorContainer container = new WindsorContainer())
             {
                 container.Kernel.Resolver.AddSubResolver(new ArrayResolver(container.Kernel));
-                container.AddFacility<MessagingFacility>(m => m
-                    .WithConfiguration(m_MessagingConfiguration)
-                    .WithLoggerFactory(NullLoggerFactory.Instance));
-                var transportResolver = (container.Resolve<IMessagingEngine>() as MessagingEngine).TransportManager.TransportInfoResolver;
-                Assert.That(transportResolver.Resolve("transport-id-1"), Is.Not.Null.And.EqualTo(m_Transport1));
-                Assert.That(transportResolver.Resolve("transport-id-2"), Is.Not.Null.And.EqualTo(m_Transport2));
+                container.AddFacility<MessagingFacility>(m => m.WithConfiguration(m_MessagingConfiguration));
+                var transportResolver = (container.Resolve<IMessagingEngine>() as MessagingEngine).TransportManager.TransportResolver;
+                Assert.That(transportResolver.GetTransport("transport-id-1"), Is.Not.Null.And.EqualTo(m_Transport1));
+                Assert.That(transportResolver.GetTransport("transport-id-2"), Is.Not.Null.And.EqualTo(m_Transport2));
 
                 container.Register(Component.For<EndpointDependTestClass1>().WithEndpoints(new {endpoint1 = "endpoint-2"}));
                 var test1 = container.Resolve<EndpointDependTestClass1>();
@@ -72,13 +67,11 @@ namespace Lykke.Messaging.Tests.Castle
             using (IWindsorContainer container = new WindsorContainer())
             {
                 container.Kernel.Resolver.AddSubResolver(new ArrayResolver(container.Kernel));
-                container.AddFacility<MessagingFacility>(f => f
-                    .WithTransport("transport-id-1", m_Transport1)
-                    .WithTransport("transport-id-2", m_Transport2)
-                    .WithLoggerFactory(NullLoggerFactory.Instance));
-                var transportResolver = (container.Resolve<IMessagingEngine>() as MessagingEngine).TransportManager.TransportInfoResolver;
-                Assert.That(transportResolver.Resolve("transport-id-1"), Is.Not.Null.And.EqualTo(m_Transport1));
-                Assert.That(transportResolver.Resolve("transport-id-2"), Is.Not.Null.And.EqualTo(m_Transport2));
+                container.AddFacility<MessagingFacility>(f => f.WithTransport("transport-id-1", m_Transport1)
+                                                               .WithTransport("transport-id-2", m_Transport2));
+                var transportResolver = (container.Resolve<IMessagingEngine>() as MessagingEngine).TransportManager.TransportResolver;
+                Assert.That(transportResolver.GetTransport("transport-id-1"), Is.Not.Null.And.EqualTo(m_Transport1));
+                Assert.That(transportResolver.GetTransport("transport-id-2"), Is.Not.Null.And.EqualTo(m_Transport2));
             }
         }
 
@@ -88,13 +81,10 @@ namespace Lykke.Messaging.Tests.Castle
             using (IWindsorContainer container = new WindsorContainer())
             {
                 container.Kernel.Resolver.AddSubResolver(new ArrayResolver(container.Kernel));
-                container.AddFacility<MessagingFacility>(f => f
-                    .WithTransport("transport-id-1", m_Transport1)
-                    .WithTransport("transport-id-2", m_Transport2)
-                    .WithLoggerFactory(NullLoggerFactory.Instance));
-                var transportResolver = (container.Resolve<IMessagingEngine>() as MessagingEngine).TransportManager.TransportInfoResolver;
-                Assert.That(transportResolver.Resolve("transport-id-1"), Is.Not.Null.And.EqualTo(m_Transport1));
-                Assert.That(transportResolver.Resolve("transport-id-2"), Is.Not.Null.And.EqualTo(m_Transport2));
+                container.AddFacility<MessagingFacility>(f => f.WithTransport("transport-id-1", m_Transport1).WithTransport("transport-id-2", m_Transport2));
+                var transportResolver = (container.Resolve<IMessagingEngine>() as MessagingEngine).TransportManager.TransportResolver;
+                Assert.That(transportResolver.GetTransport("transport-id-1"), Is.Not.Null.And.EqualTo(m_Transport1));
+                Assert.That(transportResolver.GetTransport("transport-id-2"), Is.Not.Null.And.EqualTo(m_Transport2));
             }
         }      
         
@@ -106,9 +96,7 @@ namespace Lykke.Messaging.Tests.Castle
             { 
                 container.Kernel.Resolver.AddSubResolver(new ArrayResolver(container.Kernel));
                 container.AddFacility<LoggingFacility>(f => f.LogUsing(LoggerImplementation.Console))
-                    .AddFacility<MessagingFacility>(f => f
-                        .WithConfiguration(m_MessagingConfiguration)
-                        .WithLoggerFactory(NullLoggerFactory.Instance))
+                    .AddFacility<MessagingFacility>(f => f.WithConfiguration(m_MessagingConfiguration))
                     .Register(Component.For<HandlerWithDependency>().AsMessageHandler("endpoint-1", "endpoint-2"));
                 container.Register(Component.For<HandlerDependency>());
                 engine = container.Resolve<IMessagingEngine>();
@@ -142,9 +130,7 @@ namespace Lykke.Messaging.Tests.Castle
             {
                 container.Kernel.Resolver.AddSubResolver(new ArrayResolver(container.Kernel));
                 container.AddFacility<LoggingFacility>(f => f.LogUsing(LoggerImplementation.Console))
-                    .AddFacility<MessagingFacility>(f => f
-                        .WithConfiguration(m_MessagingConfiguration)
-                        .WithLoggerFactory(NullLoggerFactory.Instance))
+                    .AddFacility<MessagingFacility>(f => f.WithConfiguration(m_MessagingConfiguration))
                     .Register(Component.For<Handler>().WithEndpoints(new { someEndpoint = "endpoint-2" }).AsMessageHandler("endpoint-1"));
                 var handler= container.Resolve<Handler>();
                 Assert.That(handler.SomeEndpoint,Is.Not.Null);
@@ -160,11 +146,10 @@ namespace Lykke.Messaging.Tests.Castle
                 container.Kernel.Resolver.AddSubResolver(new ArrayResolver(container.Kernel));
                 container.AddFacility<MessagingFacility>(f => f
                     .WithTransport("TRANSPORT_ID1", new TransportInfo("BROKER", "USERNAME", "PASSWORD", "MachineName", "InMemory"))
-                    .WithTransportFactory(new InMemoryTransportFactory())
-                    .WithLoggerFactory(NullLoggerFactory.Instance));
+                    .WithTransportFactory(new InMemoryTransportFactory()));
                 var engine = container.Resolve<IMessagingEngine>();
                 var ev = new ManualResetEvent(false);
-                var endpoint = new Endpoint("TRANSPORT_ID1", new Destination("destination"), serializationFormat: SerializationFormat.Json);
+                var endpoint = new Endpoint("TRANSPORT_ID1", "destination", serializationFormat: SerializationFormat.Json);
                 using (engine.Subscribe<string>(endpoint, s =>
                 {
                     Console.WriteLine(s);

@@ -3,27 +3,39 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using RabbitMQ.Client;
-using Microsoft.Extensions.Logging;
+using Common.Log;
+using Lykke.Common.Log;
 
 namespace Lykke.Messaging.RabbitMq
 {
-    public class SharedConsumer : DefaultBasicConsumer, IDisposable
+    public class SharedConsumer : DefaultBasicConsumer,IDisposable
     {
-        private readonly Dictionary<string, Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>>> m_Callbacks
-            = new Dictionary<string, Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>>>();
+        private readonly ILog _log;
+        private readonly Dictionary<string, Action<IBasicProperties, byte[], Action<bool>>> m_Callbacks
+            = new Dictionary<string, Action<IBasicProperties, byte[], Action<bool>>>();
         private readonly AutoResetEvent m_CallBackAdded = new AutoResetEvent(false);
         private readonly ManualResetEvent m_Stop = new ManualResetEvent(false);
-        private readonly ILogger<SharedConsumer> _logger;
 
-        public SharedConsumer(ILoggerFactory loggerFactory, IModel model) : base(model)
+        [Obsolete]
+        public SharedConsumer(ILog log, IModel model) : base(model)
         {
-            _logger = loggerFactory?.CreateLogger<SharedConsumer>() ?? throw new ArgumentNullException(nameof(loggerFactory));
+            _log = log;
         }
 
-        public void AddCallback(Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> callback, string messageType)
+        public SharedConsumer(ILogFactory logFactory, IModel model) : base(model)
+        {
+            if (logFactory == null)
+            {
+                throw new ArgumentNullException(nameof(logFactory));
+            }
+
+            _log = logFactory.CreateLog(this);
+        }
+
+        public void AddCallback(Action<IBasicProperties, byte[], Action<bool>> callback, string messageType)
         {
             if (callback == null) throw new ArgumentNullException("callback");
-            if (string.IsNullOrEmpty(messageType)) throw new ArgumentNullException(nameof(messageType));
+            if (string.IsNullOrEmpty(messageType)) throw new ArgumentNullException("messageType");
             lock (m_Callbacks)
             {
                 if (m_Callbacks.ContainsKey(messageType))
@@ -53,12 +65,12 @@ namespace Lykke.Messaging.RabbitMq
             string exchange,
             string routingKey,
             IBasicProperties properties,
-            ReadOnlyMemory<byte> body)
+            byte[] body)
         {
             bool waitForCallback = true;
             while (true)
             {
-                Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> callback;
+                Action<IBasicProperties, byte[], Action<bool>> callback;
                 lock (m_Callbacks)
                 {
                     if(waitForCallback)
@@ -80,8 +92,7 @@ namespace Lykke.Messaging.RabbitMq
                     }
                     catch (Exception e)
                     {
-                        _logger.LogError(e, "{Method}: error", nameof(HandleBasicDeliver));
-                        Model.BasicNack(deliveryTag, false, true);
+                        _log.WriteError(nameof(SharedConsumer), nameof(HandleBasicDeliver), e);
                     }
                     return;
                 }
@@ -111,14 +122,11 @@ namespace Lykke.Messaging.RabbitMq
                 {
                     try
                     {
-                        foreach (var tag in ConsumerTags)
-                        {
-                            Model.BasicCancel(tag);
-                        }
+                        Model.BasicCancel(ConsumerTag);
                     }
                     catch (Exception e)
                     {
-                        _logger.LogError(e, "{Method}: error", nameof(Stop));
+                        _log.WriteError(nameof(SharedConsumer), nameof(Stop), e);
                     }
                 }
             }
