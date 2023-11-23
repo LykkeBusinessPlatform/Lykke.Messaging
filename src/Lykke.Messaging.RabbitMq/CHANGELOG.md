@@ -1,4 +1,4 @@
-## [[tbd]] - Rabbit MQ [[tbd]] (2023-11-23)
+## 7.0.0 - Rabbit MQ 7.0.0 (2023-11-23)
 
 ### Removed
 - Downgraded RabbitMq.Client from version 6.4.0 to 5.2.0
