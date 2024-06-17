@@ -120,7 +120,7 @@ jobs:
         run: dotnet pack --no-build --configuration Release -o out
 
       - name: Push
-        run: dotnet nuget push out/*.nupkg --api-key ${{ secrets.NUGET_TOKEN }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        run: dotnet nuget push out/*.nupkg --api-key ${{ secrets.NUGET_TOKEN_LYKKE }} --source https://api.nuget.org/v3/index.json --skip-duplicate
         
       - name: Extract release notes from changelog file
         if: ${{ github.event.inputs.create_release == 'true' }}
