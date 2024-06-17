@@ -8,13 +8,13 @@ namespace Lykke.Messaging.RabbitMq
     internal class Consumer : DefaultBasicConsumer, IDisposable
     {
         private readonly ILog _log;
-        private readonly Action<IBasicProperties, byte[], Action<bool>> m_Callback;
+        private readonly Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> m_Callback;
 
         [Obsolete]
         public Consumer(
             ILog log,
             IModel model,
-            Action<IBasicProperties, byte[], Action<bool>> callback)
+            Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> callback)
             : base(model)
         {
             _log = log;
@@ -24,7 +24,7 @@ namespace Lykke.Messaging.RabbitMq
         public Consumer(
             ILogFactory logFactory,
             IModel model,
-            Action<IBasicProperties, byte[], Action<bool>> callback)
+            Action<IBasicProperties, ReadOnlyMemory<byte>, Action<bool>> callback)
             
             : base(model)
         {
@@ -44,11 +44,16 @@ namespace Lykke.Messaging.RabbitMq
             string exchange,
             string routingKey,
             IBasicProperties properties,
-            byte[] body)
+            ReadOnlyMemory<byte> body)
         {
+            // make a copy of the body, as it can be released any time
+            // https://www.rabbitmq.com/dotnet-api-guide.html#consuming-async
+            var bodyCopy = new byte[body.Length];
+            Buffer.BlockCopy(body.ToArray(), 0, bodyCopy, 0, body.Length);
+            
             try
             {
-                m_Callback(properties, body, ack =>
+                m_Callback(properties, new ReadOnlyMemory<byte>(bodyCopy), ack =>
                 {
                     if (ack)
                         Model.BasicAck(deliveryTag, false);
@@ -70,7 +75,10 @@ namespace Lykke.Messaging.RabbitMq
                 {
                     try
                     {
-                        Model.BasicCancel(ConsumerTag);
+                        foreach (var tag in ConsumerTags)
+                        {
+                            Model.BasicCancel(tag);
+                        }
                     }
                     catch (Exception e)
                     {
