@@ -1,4 +1,4 @@
-## [[tbd]] - Rabbit MQ [[tbd]] (2024-06-17)
+## 8.0.0 - Rabbit MQ 8.0.0 (2024-06-17)
 
 ### Changed
 - Bump RabbitMQ.Client to 6.4.0 
