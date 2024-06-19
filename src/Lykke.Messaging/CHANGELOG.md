@@ -1,4 +1,4 @@
-## [[tbd]] - Messaging [[tbd]] (2024-06-19)
+## 12.1.0 - Messaging 12.1.0 (2024-06-19)
 
 ### Changed
 - Bump LykkeBiz.Common -> 8.3.0
