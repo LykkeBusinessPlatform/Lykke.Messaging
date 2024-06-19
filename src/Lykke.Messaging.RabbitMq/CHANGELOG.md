@@ -1,3 +1,8 @@
+## [[tbd]] - Rabbit MQ [[tbd]] (2024-06-19)
+
+### Changed 
+- Bump LykkeBiz.Messaging -> 12.0.1
+
 ## 8.0.0 - Rabbit MQ 8.0.0 (2024-06-17)
 
 ### Changed
