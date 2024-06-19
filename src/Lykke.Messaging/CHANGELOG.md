@@ -1,3 +1,9 @@
+## [[tbd]] - Messaging [[tbd]] (2024-06-19)
+
+### Changed
+- Bump LykkeBiz.Common -> 8.3.0
+- Bump System.Reactive.PlatformServices -> 6.0.1
+
 ## 12.0.0 - Messaging 12.0.0 (2023-11-23)
 
 ### Removed
