@@ -1,15 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+
 using Castle.Facilities.Logging;
 using Castle.MicroKernel.Registration;
 using Castle.MicroKernel.Resolvers.SpecializedResolvers;
 using Castle.Windsor;
+
 using Lykke.Messaging.Castle;
 using Lykke.Messaging.Configuration;
 using Lykke.Messaging.Contract;
 using Lykke.Messaging.InMemory;
 using Lykke.Messaging.Serialization;
+
 using NUnit.Framework;
 
 namespace Lykke.Messaging.Tests.Castle
@@ -54,10 +57,10 @@ namespace Lykke.Messaging.Tests.Castle
                 Assert.That(transportResolver.GetTransport("transport-id-1"), Is.Not.Null.And.EqualTo(m_Transport1));
                 Assert.That(transportResolver.GetTransport("transport-id-2"), Is.Not.Null.And.EqualTo(m_Transport2));
 
-                container.Register(Component.For<EndpointDependTestClass1>().WithEndpoints(new {endpoint1 = "endpoint-2"}));
+                container.Register(Component.For<EndpointDependTestClass1>().WithEndpoints(new { endpoint1 = "endpoint-2" }));
                 var test1 = container.Resolve<EndpointDependTestClass1>();
-                Assert.AreEqual(m_Endpoint2.TransportId, test1.Endpoint.TransportId);
-                Assert.AreEqual(m_Endpoint2.Destination, test1.Endpoint.Destination);
+                Assert.That(m_Endpoint2.TransportId, Is.EqualTo(test1.Endpoint.TransportId));
+                Assert.That(m_Endpoint2.Destination, Is.EqualTo(test1.Endpoint.Destination));
             }
         }
 
@@ -86,14 +89,14 @@ namespace Lykke.Messaging.Tests.Castle
                 Assert.That(transportResolver.GetTransport("transport-id-1"), Is.Not.Null.And.EqualTo(m_Transport1));
                 Assert.That(transportResolver.GetTransport("transport-id-2"), Is.Not.Null.And.EqualTo(m_Transport2));
             }
-        }      
-        
+        }
+
         [Test]
         public void AsHandlerTest()
         {
             IMessagingEngine engine;
             using (IWindsorContainer container = new WindsorContainer())
-            { 
+            {
                 container.Kernel.Resolver.AddSubResolver(new ArrayResolver(container.Kernel));
                 container.AddFacility<LoggingFacility>(f => f.LogUsing(LoggerImplementation.Console))
                     .AddFacility<MessagingFacility>(f => f.WithConfiguration(m_MessagingConfiguration))
@@ -101,9 +104,9 @@ namespace Lykke.Messaging.Tests.Castle
                 container.Register(Component.For<HandlerDependency>());
                 engine = container.Resolve<IMessagingEngine>();
                 engine.Send("test", m_Endpoint1);
-                Thread.Sleep(30); 
+                Thread.Sleep(30);
                 engine.Send(1, m_Endpoint1);
-                Thread.Sleep(30); 
+                Thread.Sleep(30);
                 engine.Send(DateTime.MinValue, m_Endpoint2);
                 Thread.Sleep(100);
 
@@ -121,7 +124,7 @@ namespace Lykke.Messaging.Tests.Castle
                 Console.WriteLine(engine.GetStatistics());
             }
         }
-  
+
 
         [Test]
         public void AsHandlerAndWithEndpointTest()
@@ -132,8 +135,8 @@ namespace Lykke.Messaging.Tests.Castle
                 container.AddFacility<LoggingFacility>(f => f.LogUsing(LoggerImplementation.Console))
                     .AddFacility<MessagingFacility>(f => f.WithConfiguration(m_MessagingConfiguration))
                     .Register(Component.For<Handler>().WithEndpoints(new { someEndpoint = "endpoint-2" }).AsMessageHandler("endpoint-1"));
-                var handler= container.Resolve<Handler>();
-                Assert.That(handler.SomeEndpoint,Is.Not.Null);
+                var handler = container.Resolve<Handler>();
+                Assert.That(handler.SomeEndpoint, Is.Not.Null);
                 Assert.That(handler.SomeEndpoint.Destination.Subscribe, Is.EqualTo("second-destination"));
             }
         }

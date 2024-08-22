@@ -1,9 +1,12 @@
 ﻿using System.Collections.Generic;
+
 using Castle.MicroKernel.Registration;
 using Castle.Windsor;
+
 using Lykke.Messaging.Castle;
 using Lykke.Messaging.Configuration;
 using Lykke.Messaging.Contract;
+
 using NUnit.Framework;
 
 namespace Lykke.Messaging.Tests.Castle
@@ -27,7 +30,7 @@ namespace Lykke.Messaging.Tests.Castle
             m_Endpoint4 = new Endpoint("transport-id-4", "destination-4");
             m_Endpoint5 = new Endpoint("transport-id-5", "destination-5");
             var messagingConfiguration = new MockMessagingConfiguration(
-                new Dictionary<string, TransportInfo>(), 
+                new Dictionary<string, TransportInfo>(),
                 new Dictionary<string, Endpoint>
                 {
                     {"endpoint1", m_Endpoint1},
@@ -48,8 +51,8 @@ namespace Lykke.Messaging.Tests.Castle
             m_Container.Register(Component.For<EndpointDependTestClass1>());
 
             var test1 = m_Container.Resolve<EndpointDependTestClass1>();
-            Assert.AreEqual(m_Endpoint1.TransportId, test1.Endpoint.TransportId);
-            Assert.AreEqual(m_Endpoint1.Destination, test1.Endpoint.Destination);
+            Assert.That(m_Endpoint1.TransportId, Is.EqualTo(test1.Endpoint.TransportId));
+            Assert.That(m_Endpoint1.Destination, Is.EqualTo(test1.Endpoint.Destination));
         }
 
         [Test]
@@ -58,8 +61,8 @@ namespace Lykke.Messaging.Tests.Castle
             m_Container.Register(Component.For<EndpointDependTestClass1>().WithEndpoints(new { endpoint1 = "endpoint2" }));
 
             var test1 = m_Container.Resolve<EndpointDependTestClass1>();
-            Assert.AreEqual(m_Endpoint2.TransportId, test1.Endpoint.TransportId);
-            Assert.AreEqual(m_Endpoint2.Destination, test1.Endpoint.Destination);
+            Assert.That(m_Endpoint2.TransportId, Is.EqualTo(test1.Endpoint.TransportId));
+            Assert.That(m_Endpoint2.Destination, Is.EqualTo(test1.Endpoint.Destination));
         }
 
         [Test]
@@ -69,8 +72,8 @@ namespace Lykke.Messaging.Tests.Castle
 
             m_Container.Register(Component.For<EndpointDependTestClass1>().WithEndpoints(new { endpoint1 = endpoint }));
             var test1 = m_Container.Resolve<EndpointDependTestClass1>();
-            Assert.AreEqual(endpoint.TransportId, test1.Endpoint.TransportId);
-            Assert.AreEqual(endpoint.Destination, test1.Endpoint.Destination);
+            Assert.That(endpoint.TransportId, Is.EqualTo(test1.Endpoint.TransportId));
+            Assert.That(endpoint.Destination, Is.EqualTo(test1.Endpoint.Destination));
         }
 
         [Test]
@@ -79,10 +82,10 @@ namespace Lykke.Messaging.Tests.Castle
             m_Container.Register(Component.For<EndpointDependTestClass2>());
 
             var test1 = m_Container.Resolve<EndpointDependTestClass2>();
-            Assert.AreEqual(m_Endpoint1.TransportId, test1.Endpoint1.TransportId);
-            Assert.AreEqual(m_Endpoint1.Destination, test1.Endpoint1.Destination);
-            Assert.AreEqual(m_Endpoint2.TransportId, test1.Endpoint2.TransportId);
-            Assert.AreEqual(m_Endpoint2.Destination, test1.Endpoint2.Destination);
+            Assert.That(m_Endpoint1.TransportId, Is.EqualTo(test1.Endpoint1.TransportId));
+            Assert.That(m_Endpoint1.Destination, Is.EqualTo(test1.Endpoint1.Destination));
+            Assert.That(m_Endpoint2.TransportId, Is.EqualTo(test1.Endpoint2.TransportId));
+            Assert.That(m_Endpoint2.Destination, Is.EqualTo(test1.Endpoint2.Destination));
         }
 
         [Test]
@@ -91,10 +94,10 @@ namespace Lykke.Messaging.Tests.Castle
             m_Container.Register(Component.For<EndpointDependTestClass2>().WithEndpoints(new { endpoint1 = "endpoint4", endpoint2 = "endpoint5" }));
 
             var test1 = m_Container.Resolve<EndpointDependTestClass2>();
-            Assert.AreEqual(m_Endpoint4.TransportId, test1.Endpoint1.TransportId);
-            Assert.AreEqual(m_Endpoint4.Destination, test1.Endpoint1.Destination);
-            Assert.AreEqual(m_Endpoint5.TransportId, test1.Endpoint2.TransportId);
-            Assert.AreEqual(m_Endpoint5.Destination, test1.Endpoint2.Destination);
+            Assert.That(m_Endpoint4.TransportId, Is.EqualTo(test1.Endpoint1.TransportId));
+            Assert.That(m_Endpoint4.Destination, Is.EqualTo(test1.Endpoint1.Destination));
+            Assert.That(m_Endpoint5.TransportId, Is.EqualTo(test1.Endpoint2.TransportId));
+            Assert.That(m_Endpoint5.Destination, Is.EqualTo(test1.Endpoint2.Destination));
         }
 
         [Test]
@@ -103,10 +106,10 @@ namespace Lykke.Messaging.Tests.Castle
             m_Container.Register(Component.For<EndpointDependTestClass2>().WithEndpoints(new { endpoint2 = "endpoint5" }));
 
             var test1 = m_Container.Resolve<EndpointDependTestClass2>();
-            Assert.AreEqual(m_Endpoint1.TransportId, test1.Endpoint1.TransportId);
-            Assert.AreEqual(m_Endpoint1.Destination, test1.Endpoint1.Destination);
-            Assert.AreEqual(m_Endpoint5.TransportId, test1.Endpoint2.TransportId);
-            Assert.AreEqual(m_Endpoint5.Destination, test1.Endpoint2.Destination);
+            Assert.That(m_Endpoint1.TransportId, Is.EqualTo(test1.Endpoint1.TransportId));
+            Assert.That(m_Endpoint1.Destination, Is.EqualTo(test1.Endpoint1.Destination));
+            Assert.That(m_Endpoint5.TransportId, Is.EqualTo(test1.Endpoint2.TransportId));
+            Assert.That(m_Endpoint5.Destination, Is.EqualTo(test1.Endpoint2.Destination));
         }
 
         [Test]
@@ -117,10 +120,10 @@ namespace Lykke.Messaging.Tests.Castle
             m_Container.Register(Component.For<EndpointDependTestClass2>().WithEndpoints(new { endpoint1 = "endpoint4", endpoint2 = endpoint }));
 
             var test1 = m_Container.Resolve<EndpointDependTestClass2>();
-            Assert.AreEqual(m_Endpoint4.TransportId, test1.Endpoint1.TransportId);
-            Assert.AreEqual(m_Endpoint4.Destination, test1.Endpoint1.Destination);
-            Assert.AreEqual(endpoint.TransportId, test1.Endpoint2.TransportId);
-            Assert.AreEqual(endpoint.Destination, test1.Endpoint2.Destination);
+            Assert.That(m_Endpoint4.TransportId, Is.EqualTo(test1.Endpoint1.TransportId));
+            Assert.That(m_Endpoint4.Destination, Is.EqualTo(test1.Endpoint1.Destination));
+            Assert.That(endpoint.TransportId, Is.EqualTo(test1.Endpoint2.TransportId));
+            Assert.That(endpoint.Destination, Is.EqualTo(test1.Endpoint2.Destination));
         }
     }
 
