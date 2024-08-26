@@ -1,9 +1,12 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
+
 using Lykke.Common.Log;
 using Lykke.Logs;
 using Lykke.Messaging.Serialization;
+
 using Moq;
+
 using NUnit.Framework;
 
 namespace Lykke.Messaging.Tests
@@ -23,7 +26,7 @@ namespace Lykke.Messaging.Tests
         {
             var serializationManager = new SerializationManager(_logFactory);
 
-            Assert.NotNull(serializationManager.ExtractSerializer<int>(SerializationFormat.Json));
+            Assert.That(serializationManager.ExtractSerializer<int>(SerializationFormat.Json), Is.Not.Null);
         }
 
         [Test]
@@ -31,7 +34,7 @@ namespace Lykke.Messaging.Tests
         {
             var serializationManager = new SerializationManager(_logFactory);
 
-            Assert.NotNull(serializationManager.ExtractSerializer<int>(SerializationFormat.MessagePack));
+            Assert.That(serializationManager.ExtractSerializer<int>(SerializationFormat.MessagePack), Is.Not.Null);
         }
 
         [Test]
@@ -39,7 +42,7 @@ namespace Lykke.Messaging.Tests
         {
             var serializationManager = new SerializationManager(_logFactory);
 
-            Assert.NotNull(serializationManager.ExtractSerializer<int>(SerializationFormat.ProtoBuf));
+            Assert.That(serializationManager.ExtractSerializer<int>(SerializationFormat.ProtoBuf), Is.Not.Null);
         }
 
         [Test]

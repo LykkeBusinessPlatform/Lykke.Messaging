@@ -28,12 +28,10 @@ jobs:
           echo "Event ref: ${{ github.event.ref }}"
           echo "Environment: ${{ github.event.environment }}"
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v2
-        with:
-          dotnet-version: 6.0.x
+        uses: actions/setup-dotnet@v4
 
       - name: Restore dependencies
         run: dotnet restore --source https://api.nuget.org/v3/index.json --source https://nuget-lykkecloud.azurewebsites.net/nuget
