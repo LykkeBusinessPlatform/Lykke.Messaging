@@ -1,4 +1,4 @@
-## [[tbd]] - Messaging [[tbd]] (2024-08-22)
+## 13.0.0 - Messaging 13.0.0 (2024-08-22)
 
 ### Changed
 - LT-5587: Migrate to .NET 8
