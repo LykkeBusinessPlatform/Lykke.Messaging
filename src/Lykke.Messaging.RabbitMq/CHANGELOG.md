@@ -1,4 +1,4 @@
-## [[tbd]] - Rabbit MQ [[tbd]] (2024-09-10)
+## 9.0.0 - Rabbit MQ 9.0.0 (2024-09-10)
 
 ### Changed
 - LT-5650: Migrate to .NET 8
