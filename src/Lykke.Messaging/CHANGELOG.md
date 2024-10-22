@@ -1,3 +1,8 @@
+## [[tbd]] - MessagePack Update [[tbd]] (2024-10-22)
+
+### Changed
+- LT-5805: Bump MessagePack -> 2.5.187
+
 ## 13.0.0 - Messaging 13.0.0 (2024-08-22)
 
 ### Changed
