@@ -1,5 +1,8 @@
 ﻿using Common.Log;
 using Lykke.Common.Log;
+
+using MessagePack;
+
 using ProtoBuf;
 using System;
 using System.Collections.Generic;
@@ -74,7 +77,7 @@ namespace Lykke.Messaging.Serialization
             switch (NativeFormat)
             {
                 case SerializationFormat.MessagePack:
-                    return MessagePack.MessagePackSerializer.Serialize(message, MessagePackSerializerFactory.Defaults.FormatterResolver);
+                    return MessagePackSerializer.Serialize(message);
 
                 case SerializationFormat.ProtoBuf:
                     using (var memStream = new MemoryStream())
@@ -106,7 +109,7 @@ namespace Lykke.Messaging.Serialization
                     switch (fmt)
                     {
                         case SerializationFormat.MessagePack:
-                            result = MessagePack.MessagePackSerializer.Deserialize<TMessage>(message, MessagePackSerializerFactory.Defaults.FormatterResolver);
+                            result = MessagePackSerializer.Deserialize<TMessage>(message);
                             break;
 
                         case SerializationFormat.ProtoBuf:
