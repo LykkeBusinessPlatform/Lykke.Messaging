@@ -1,4 +1,4 @@
-## [[tbd]] - Rabbit MQ [[tbd]] ([[date]])
+## 10.0.1 - Rabbit MQ 10.0.1 (2024-10-23)
 
 ### Fixed
 - LT-5805: Loading MessagePack types in runtime
