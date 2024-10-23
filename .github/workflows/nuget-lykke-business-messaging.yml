@@ -77,7 +77,7 @@ jobs:
 
       - name: Inject new version into changelog file
         if: ${{ github.event.inputs.update_changelog == 'true' }}
-        uses: LykkeBusiness/.github/actions/inject-version-changelog@inject-version-changelog-v2
+        uses: LykkeBusiness/.github/actions/inject-version-changelog@master
         with:
           version: ${{ env.TAG_NUMBERS }}
           folder: ${{ env.PROJECT_FOLDER }}
