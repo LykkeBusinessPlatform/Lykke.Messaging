@@ -1,4 +1,4 @@
-## [[tbd]] - MessagePack Update [[tbd]] ([[date]])
+## 14.0.1 - MessagePack Update 14.0.1 (2024-10-23)
 
 ### Fixed
 - LT-5805: Do not load in runtime all types of attributes of message contract
