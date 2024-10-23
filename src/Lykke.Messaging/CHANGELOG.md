@@ -1,4 +1,4 @@
-## [[tbd]] - MessagePack Update [[tbd]] (2024-10-22)
+## [[tbd]] - MessagePack Update [[tbd]] ([[date]])
 
 ### Changed
 - LT-5805: Bump MessagePack -> 2.5.187
