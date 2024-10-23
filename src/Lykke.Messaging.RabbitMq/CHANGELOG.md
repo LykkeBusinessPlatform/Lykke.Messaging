@@ -1,3 +1,8 @@
+## [[tbd]] - Rabbit MQ [[tbd]] ([[date]])
+
+### Changed
+- LT-5805: Bump MessagePack -> 2.5.187
+
 ## 9.0.0 - Rabbit MQ 9.0.0 (2024-09-10)
 
 ### Changed
