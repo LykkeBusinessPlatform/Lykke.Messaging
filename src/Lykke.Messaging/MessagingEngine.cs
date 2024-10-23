@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
+using System.Reflection;
 using System.Threading;
 using Common.Log;
 using JetBrains.Annotations;
@@ -227,7 +228,7 @@ namespace Lykke.Messaging
             string processingGroup = null,
             Dictionary<string, string> headers = null)
         {
-            var type = GetMessageType(message.GetType());
+            var type = GetMessageContractName(message.GetType());
             var bytes = m_SerializationManager.SerializeObject(endpoint.SerializationFormat, message);
             var serializedMessage = new BinaryMessage
             {
@@ -310,7 +311,7 @@ namespace Lykke.Messaging
                                 (message, headers) => callback((TMessage)message, ack, headers),
                                 ack,
                                 endpoint),
-                        endpoint.SharedDestination ? GetMessageType(typeof(TMessage)) : null,
+                        endpoint.SharedDestination ? GetMessageContractName(typeof(TMessage)) : null,
                         processingGroup,
                         priority);
                 }
@@ -388,7 +389,7 @@ namespace Lykke.Messaging
             {
                 try
                 {
-                    var dictionary = knownTypes.ToDictionary(GetMessageType);
+                    var dictionary = knownTypes.ToDictionary(GetMessageContractName);
 
                     return Subscribe(
                         endpoint,
@@ -630,7 +631,7 @@ namespace Lykke.Messaging
                 	        TResponse response = handler(message);
                 	        return SerializeMessage(endpoint.SerializationFormat,response);
                 	    },
-                	    endpoint.SharedDestination ? GetMessageType(typeof (TRequest)) : null
+                	    endpoint.SharedDestination ? GetMessageContractName(typeof (TRequest)) : null
                 		);
                 	var messagingHandle = CreateMessagingHandle(() =>
                 	    {
@@ -671,25 +672,19 @@ namespace Lykke.Messaging
 
         private BinaryMessage SerializeMessage<TMessage>(SerializationFormat format,TMessage message)
         {
-            var type = GetMessageType(typeof(TMessage));
+            var type = GetMessageContractName(typeof(TMessage));
             var bytes = m_SerializationManager.Serialize(format, message);
             return new BinaryMessage{ Bytes = bytes, Type = type };
         }
 
-        private string GetMessageType(Type type)
+        private string GetMessageContractName(Type type) => m_MessageTypeMapping.GetOrAdd(type, GetContractName);
+
+        private static string GetContractName(Type type) => TryGetProtoContractName(type) ?? type.Name;
+
+        private static string TryGetProtoContractName(Type type)
         {
-        	return m_MessageTypeMapping.GetOrAdd(
-                type,
-                clrType =>
-        	        {
-                        //TODO: type should be determined by serializer
-        	            var typeName = clrType.GetCustomAttributes(false)
-        	                .Select(a => a as ProtoBuf.ProtoContractAttribute)
-        	                .Where(a => a != null)
-        	                .Select(a => a.Name)
-        	                .FirstOrDefault();
-        	            return typeName ?? clrType.Name;
-        	        });
+            var attribute = type.GetCustomAttribute<ProtoBuf.ProtoContractAttribute>();
+            return attribute?.Name;
         }
 
         private IDisposable Subscribe(
