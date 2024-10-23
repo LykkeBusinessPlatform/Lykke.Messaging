@@ -59,7 +59,7 @@ jobs:
           git clone -v https://${{ secrets.BITBUCKET_USER }}:${{ secrets.BITBUCKET_PASSWORD }}@bitbucket.org/lykke-snow/lykke.snow.deployment.git lykke.snow.deployment
 
       - name: Parse version number
-        uses: LykkeBusiness/.github/actions/parse-version@parse-version-v1
+        uses: LykkeBusiness/.github/actions/parse-version@master
         with:
           version: ${{ github.event.inputs.version }}
 
@@ -83,7 +83,7 @@ jobs:
           folder: ${{ env.PROJECT_FOLDER }}
 
       - name: Update .csproj files with new version
-        uses: LykkeBusiness/.github/actions/update-version-csproj@update-version-csproj-v1
+        uses: LykkeBusiness/.github/actions/update-version-csproj@master
         with:
           version: ${{ env.TAG_NUMBERS }}
           folder: ${{ env.PROJECT_FOLDER }}
